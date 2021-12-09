@@ -1,6 +1,6 @@
 import { reactive, readonly } from '@vue/reactivity';
 import { v4 } from 'uuid';
-import { Command, ServerMessage, ClientMessage } from '@core/ws';
+import { Command, ServerMessage, ClientMessage } from '@core/commands';
 
 let ws: WebSocket | undefined;
 const state = reactive({

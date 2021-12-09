@@ -21,11 +21,6 @@
       "paths": {
          "@/*": ["./src/*"],
          "@core/*": ["../core/*"]
-      },
-      "plugins": [
-         {
-            "name": "@vuedx/typescript-plugin-vue"
-         }
-      ]
+      }
    }
 }

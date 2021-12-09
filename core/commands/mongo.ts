@@ -1,26 +1,21 @@
 
 import type { AbstractCursor, Db, ListDatabasesResult as mListDatabasesResult } from 'mongodb';
 
-export interface ClientMessage {
-   id: string;
-   data: Command;
-}
-
-export type Command = MongoCommand;
-
 export type MongoCommand = ListDatabasesCommand | ListCollectionsCommand;
 
 export type ListDatabasesCommand = {
-   command: 'mongo.server.listDatabases'
+   name: 'mongo.server.listDatabases',
+   /** When given, only databases within the named connections are returned. When omitted, databases for all known connections are returned */
+   connections?: string[]
 }
 
 export type ListCollectionsCommand = {
-   command: 'mongo.database.listCollections',
+   name: 'mongo.database.listCollections',
    connectionName: string;
    databaseName: string;
 }
 
-export interface ServerMessage<TCommand extends Command | unknown = unknown> {
+export interface ServerMessage<TCommand extends MongoCommand | unknown = unknown> {
    /** Unique id for this result */
    id: string;
    /** The id of the command that this result is a response to */
@@ -28,7 +23,7 @@ export interface ServerMessage<TCommand extends Command | unknown = unknown> {
    data: CommandResultData<TCommand>;
 }
 
-export type CommandResultData<TCommand extends Command | unknown> =
+export type CommandResultData<TCommand extends MongoCommand | unknown> =
    TCommand extends ListDatabasesCommand
    ? ListDatabasesResult
    : TCommand extends ListCollectionsCommand

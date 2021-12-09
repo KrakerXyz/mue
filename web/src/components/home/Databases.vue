@@ -29,7 +29,7 @@
 <script lang="ts">
    import { useWs } from '@/services';
    import { defineComponent, watch, ref, computed } from 'vue';
-   import { ListDatabasesResult } from '@core/ws';
+   import { ListDatabasesResult } from '@core/commands';
 
    export default defineComponent({
       emits: {
@@ -47,7 +47,7 @@
                   return;
                }
                const result = await ws.send({
-                  command: 'mongo.server.listDatabases',
+                  name: 'mongo.server.listDatabases',
                });
                rawDbs.value = result.data;
             },

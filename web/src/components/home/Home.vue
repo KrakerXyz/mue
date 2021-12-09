@@ -21,7 +21,7 @@
          const ws = useWs();
          const dbSelected = async (db: SelectedDatabase) => {
             const cols = await ws.send({
-               command: 'mongo.database.listCollections',
+               name: 'mongo.database.listCollections',
                connectionName: db.connectionName,
                databaseName: db.databaseName,
             });

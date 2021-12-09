@@ -23,7 +23,7 @@ const server = fastify({
     }
 });
 
-const webSocketManager = new WebSocketManager(server.log.child({ name: 'ws.services.WebSocketManager' }));
+const webSocketManager = new WebSocketManager();
 
 server.register(fastifyWebsocket, {
     errorHandler: (_, conn) => {
