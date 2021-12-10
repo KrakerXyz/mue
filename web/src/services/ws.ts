@@ -1,13 +1,17 @@
 import { reactive, readonly } from '@vue/reactivity';
 import { v4 } from 'uuid';
-import { Command, ServerMessage, ClientMessage } from '@core/commands';
+import { Command, CommandServerMessage, CommandClientMessage } from '@core/commands';
+import { Subscription, SubscriptionServerMessage, SubscriptionClientMessage, SubscriptionDataType } from '@core/subscriptions';
+import { isCommandServerMessage } from '@core/index';
+import Observable from 'zen-observable';
 
 let ws: WebSocket | undefined;
 const state = reactive({
    connected: false
 });
 
-const inflight = new Map<string, { resolve: (msg: ServerMessage) => void | Promise<void>, reject: () => void }>();
+const inflightCommands = new Map<string, { resolve: (msg: CommandServerMessage) => void | Promise<void>, reject: () => void }>();
+const subscriptions = new Map<string, ZenObservable.SubscriptionObserver<SubscriptionDataType<any>>>();
 
 export function useWs() {
    if (!ws) {
@@ -19,27 +23,55 @@ export function useWs() {
       ws.addEventListener('close', () => {
          state.connected = false;
       });
+
       ws.addEventListener('message', data => {
-         const obj: ServerMessage = JSON.parse(data.data);
-         const prom = inflight.get(obj.replyTo);
-         if (!prom) { return; }
-         prom.resolve(obj);
+         const obj: CommandServerMessage | SubscriptionServerMessage = JSON.parse(data.data);
+         if (isCommandServerMessage(obj)) {
+            const prom = inflightCommands.get(obj.replyTo);
+            if (!prom) { return; }
+            prom.resolve(obj);
+         } else {
+            const sub = subscriptions.get(obj.replyTo);
+            if (!sub) {
+               console.warn(`Received ${obj.name} subscription data for a subscription that did not exist`);
+               return;
+            }
+
+            sub.next(obj.data);
+         }
+
       });
    }
 
    return {
       state: readonly(state),
-      send<TCommand extends Command>(command: TCommand): Promise<ServerMessage<TCommand>> {
-         const wsMsg: ClientMessage = {
+      subscribe<TSubscription extends Subscription>(data: TSubscription): Observable<SubscriptionDataType<TSubscription>> {
+         const clientMessage: SubscriptionClientMessage = {
             id: v4(),
-            data: command
+            data
          };
 
-         return new Promise((resolve, reject) => {
-            inflight.set(wsMsg.id, { resolve, reject });
-            ws?.send(JSON.stringify(wsMsg));
-         });
+         return new Observable<SubscriptionDataType<TSubscription>>(sub => {
 
+            subscriptions.set(clientMessage.id, sub);
+
+            ws?.send(JSON.stringify(clientMessage));
+
+            return () => {
+               subscriptions.delete(clientMessage.id);
+            };
+         });
+      },
+      command<TCommand extends Command>(data: TCommand): Promise<CommandServerMessage> {
+         const clientMessage: CommandClientMessage = {
+            id: v4(),
+            data
+         };
+
+         return new Promise<CommandServerMessage>((resolve, reject) => {
+            inflightCommands.set(clientMessage.id, { resolve, reject });
+            ws?.send(JSON.stringify(clientMessage));
+         });
       }
    };
 }

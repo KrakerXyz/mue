@@ -1,13 +1,11 @@
 import { Command } from '@core/commands';
-import { CommandResultData } from '@core/commands/mongo';
 import { WorkspaceServices } from '..';
-import { listCollectionsHandler, listDatabasesHandler } from './mongo';
+import * as config from './config';
 
-export type Handler<T extends Command = Command> = (cmd: T, services: WorkspaceServices) => Promise<CommandResultData<T>>
+export type Handler<T extends Command = Command> = (cmd: T, services: WorkspaceServices) => Promise<void>
 
-type CommandKeys = Command['name'];
+type SubscriptionNames = Command['name'];
 
-export const commandHandlers: Record<CommandKeys, Handler<any>> = {
-   'mongo.database.listCollections': listCollectionsHandler,
-   'mongo.server.listDatabases': listDatabasesHandler
+export const commandHandlers: Record<SubscriptionNames, Handler<any>> = {
+   'command.config.connections.update': config.connectionsUpdateHandler,
 };

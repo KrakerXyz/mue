@@ -1,17 +1,18 @@
-import { CommandResultData, MongoCommand } from './mongo';
-export * from './mongo';
+import { ConfigCommand } from './configCommands';
 
-export type Command = MongoCommand;
+export type Command = ConfigCommand;
 
-export interface ClientMessage {
+export interface CommandClientMessage<TData extends Command = Command> {
    id: string;
-   data: Command;
+   data: TData;
 }
 
-export interface ServerMessage<TCommand extends Command | unknown = unknown> {
-   /** Unique id for this result */
+export type CommandServerMessage<TCommand extends Command = Command> = {
+   /** Unique id for this message */
    id: string;
-   /** The id of the command that this result is a response to */
+   /** id from the subscription client message */
    replyTo: string;
-   data: CommandResultData<TCommand>;
+   /** the name of the command that was executed */
+   name: `command.${string}`;
+   ok: boolean;
 }

@@ -1,4 +1,4 @@
-import { Config, Db } from '@/persistence';
+import { Config, Db } from '../persistence';
 
 export class WorkspaceServices {
 

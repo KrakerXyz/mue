@@ -6,6 +6,7 @@ import fastify from 'fastify';
 import fastifyWebsocket from 'fastify-websocket';
 import fastifyStatic from 'fastify-static';
 
+import 'module-alias/register';
 import { WebSocketManager } from './services';
 import path from 'path';
 

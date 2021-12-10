@@ -1,12 +1,19 @@
 
 import level from 'level';
 
+const instances = new Map<string, level.LevelDB>();
+
 export class Db {
 
    private readonly _level: level.LevelDB;
 
    public constructor(public readonly name: string) {
-      this._level = level(name);
+      let db = instances.get(name);
+      if (!db) {
+         db = level(`.level/${name}`);
+         instances.set(name, db);
+      }
+      this._level = db;
    }
 
    public createNamespace<T = any>(name: string): DbNamespace {

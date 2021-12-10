@@ -1,5 +1,5 @@
 import { Db, DbNamespace } from './Db';
-import { Connection } from './model/Connection';
+import { Connection } from '@core/models/Connection';
 
 export class Config {
 
@@ -12,6 +12,9 @@ export class Config {
    public readonly connections = {
       list: () => {
          return this._ns.get('connections') as Promise<Connection[]>;
+      },
+      update: (connections: Connection[]) => {
+         return this._ns.put('connections', connections);
       }
    };
 
