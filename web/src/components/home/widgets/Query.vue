@@ -16,7 +16,7 @@
       <template #body>
          <div class="row g-0">
             <div class="col">
-               <textarea class="form-control font-monospace" :class="{ 'is-invalid': invalid }" v-model="queryString"></textarea>
+               <textarea class="form-control font-monospace" :class="{ 'is-invalid': invalid }" v-model="queryString" spellcheck="false"></textarea>
             </div>
             <div class="col-auto" v-if="!invalid">
                <button class="btn btn-primary h-100" @click="exec()">E</button>
@@ -30,7 +30,7 @@
    import { useWs } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
    import { computed, defineComponent, onUnmounted, reactive, ref } from 'vue';
-   import WorkspaceWidget from './WorkspaceWidget.vue';
+   import WorkspaceWidget from '../WorkspaceWidget.vue';
 
    export default defineComponent({
       components: {
@@ -47,7 +47,9 @@
          const queryString = ref<string>(`db.getCollection('${props.collection}').find({})`);
 
          const parsed = computed(() => {
-            const match = /^db\.getCollection\('(.+)'\)\.(find|aggregate)\(((?:\{|\[).*(?:\}|\]))\)$/.exec(queryString.value);
+            const match = /^db\.getCollection\('(.+)'\)\.(find|aggregate)\(((?:\{|\[).*(?:\}|\]))\)$/.exec(
+               queryString.value.replaceAll('\r', '').replaceAll('\n', '')
+            );
             if (!match?.length) {
                return;
             }

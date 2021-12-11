@@ -33,9 +33,8 @@
    import { observableJoin, useSubscriptionRef, useWs } from '@/services';
    import { DatabaseListData } from '@core/subscriptions';
    import { defineComponent, watch, ref, computed, onUnmounted, inject } from 'vue';
-   import { WidgetManager } from './Workspace.vue';
-   import Collections from './Collections.vue';
-   import WorkspaceWidget from './WorkspaceWidget.vue';
+   import { WidgetManager } from '../Workspace.vue';
+   import WorkspaceWidget from '../WorkspaceWidget.vue';
 
    export default defineComponent({
       components: {
@@ -103,7 +102,7 @@
 
          const widgetManager = inject<WidgetManager>(WidgetManager.INJECT);
          const dbSelected = (db: SelectedDatabase) => {
-            widgetManager?.add(Collections, {
+            widgetManager?.add('collections', {
                connection: db.connectionName,
                database: db.databaseName,
             } as any);

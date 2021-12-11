@@ -23,7 +23,8 @@
 
 <script lang="ts">
    import { defineComponent, inject } from 'vue';
-   import { Widget, WidgetManager } from './Workspace.vue';
+   import { WidgetManager } from './Workspace.vue';
+   import { Widget } from '@core/models';
 
    export default defineComponent({
       setup(props, { attrs }) {

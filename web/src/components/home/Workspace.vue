@@ -15,9 +15,19 @@
 
 <script lang="ts">
    import { v4 } from 'uuid';
-   import { Component, defineComponent, inject, markRaw, ref } from 'vue';
+   import { defineComponent, inject, ref } from 'vue';
+   import Collections from './widgets/Collections.vue';
+   import Databases from './widgets/Databases.vue';
+   import Query from './widgets/Query.vue';
+   import { Widget, WidgetStyle, WorkspaceState } from '@core/models';
+   import { useWs } from '@/services';
 
    export default defineComponent({
+      components: {
+         Databases,
+         Collections,
+         Query,
+      },
       setup() {
          const manager = inject<WidgetManager>(WidgetManager.INJECT);
          if (!manager) {
@@ -34,24 +44,13 @@
       },
    });
 
-   interface WidgetStyle {
-      zIndex: number;
-      left?: string;
-      top?: string;
-      width?: string;
-      height?: string;
-   }
-
-   export interface Widget<TProps = any, T extends Component<TProps> = Component> {
-      id: string;
-      component: T;
-      props: TProps;
-      style: WidgetStyle;
-      maximized: boolean;
-   }
-
    export class WidgetManager {
       public static readonly INJECT = Symbol('Widget Manager');
+      private readonly _ws: ReturnType<typeof useWs>;
+
+      public constructor() {
+         this._ws = useWs();
+      }
 
       private readonly _widgets = ref<Widget[]>([]);
 
@@ -59,10 +58,10 @@
          return this._widgets;
       }
 
-      public add<TProps>(component: Component<TProps>, props: TProps) {
+      public add(component: string, props: Record<string, any>) {
          const newWidget: Widget = {
             id: v4(),
-            component: markRaw(component),
+            component,
             props,
             style: {
                top: `${this._widgets.value.length * 40 + 5}px`,
@@ -75,6 +74,7 @@
          setTimeout(() => {
             this.bringToFront(newWidget);
             this._widgets.value = [...this._widgets.value, newWidget];
+            this.updateState();
          });
       }
 
@@ -87,17 +87,33 @@
          const newWidgets = [...this._widgets.value];
          newWidgets.splice(existingIndex, 1);
          this._widgets.value = newWidgets;
+         this.updateState();
       };
 
       public readonly toggleMaximized = (widget: Widget) => {
          this.bringToFront(widget);
 
          widget.maximized = !widget.maximized;
+         this.updateState();
       };
 
       public readonly bringToFront = (w: Widget) => {
          const maxIndex = this._widgets.value.reduce((p, c) => Math.max(p, c.style.zIndex), 0);
          w.style.zIndex = maxIndex + 1;
+         this.updateState();
       };
+
+      public readonly setState = (state: WorkspaceState) => {
+         this._widgets.value = state.widgets;
+      };
+
+      private updateState() {
+         this._ws.command({
+            name: 'command.config.workspace.state.update',
+            state: {
+               widgets: this._widgets.value,
+            },
+         });
+      }
    }
 </script>

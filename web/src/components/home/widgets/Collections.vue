@@ -27,9 +27,8 @@
 <script lang="ts">
    import { useSubscriptionRef, useWs } from '@/services';
    import { computed, defineComponent, inject, ref } from 'vue';
-   import WorkspaceWidget from './WorkspaceWidget.vue';
-   import { WidgetManager } from './Workspace.vue';
-   import QueryVue from './Query.vue';
+   import WorkspaceWidget from '../WorkspaceWidget.vue';
+   import { WidgetManager } from '../Workspace.vue';
    import { Collection } from '@core/models';
 
    export default defineComponent({
@@ -52,7 +51,7 @@
          );
 
          const openQuery = (c: Collection) => {
-            widgetManager?.add(QueryVue, {
+            widgetManager?.add('query', {
                connection: props.connection,
                database: props.database,
                collection: c.name,

@@ -1,0 +1,6 @@
+import { WorkspaceStateUpdateCommand } from '@core/commands/configCommands';
+import { Handler } from '..';
+
+export const workspaceStateUpdateHandler: Handler<WorkspaceStateUpdateCommand> = (cmd, services) => {
+   return services.config.workspaceState.update(cmd.state);
+};
