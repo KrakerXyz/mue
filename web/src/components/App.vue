@@ -3,13 +3,14 @@
       <div class="navbar navbar-expand navbar-dark bg-dark sticky-top">
          <div class="container-fluid">
             <ul class="navbar-nav">
-               <li class="nav-item">
+               <!-- <li class="nav-item">
                   <router-link class="nav-link" :to="{ name: 'home' }">Home</router-link>
-               </li>
+               </li> -->
             </ul>
 
             <span class="navbar-text">
-               {{ wsState.connected ? 'Connected' : 'Disconnected' }}
+               <span v-if="wsState.connected" class="text-success"><i class="fas fa-wifi fa-fw"></i></span>
+               <span v-if="!wsState.connected" class="text-danger"><i class="fas fa-wifi-slash fa-fw"></i></span>
             </span>
          </div>
       </div>

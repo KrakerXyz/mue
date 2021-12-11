@@ -24,8 +24,8 @@ export class Db {
       return this._level.put(key, JSON.stringify(value));
    }
 
-   public get(key: string): Promise<any> {
-      return this._level.get(key).then(v => JSON.parse(v));
+   public get(key: string): Promise<any | null> {
+      return this._level.get(key).then(v => JSON.parse(v)).catch(() => null);
    }
 
 }
@@ -45,7 +45,7 @@ export class DbNamespace<T = any> {
       return this._parent.put(fullKey, value);
    }
 
-   public get(key: string): Promise<T> {
+   public get(key: string): Promise<T | null> {
       const fullKey = `${this.name}|${key}`;
       return this._parent.get(fullKey);
    }

@@ -1,5 +1,7 @@
 
+export type ConnectionString = `mongodb+srv://${string}`;
+
 export interface Connection {
    name: string;
-   connectionString: string;
+   connectionString: ConnectionString;
 }

@@ -1,37 +1,20 @@
 <template>
-   <div class="container-fluid h-100 p-3">
-      <div class="row h-100">
-         <!-- <div class="h-100 col-3">
-            <databases @selected="dbSelected($event)"></databases>
-         </div>
-
-         <div class="col">Content</div>
-         -->
-      </div>
-   </div>
+   <workspace></workspace>
 </template>
 
 <script lang="ts">
-   import { defineComponent } from 'vue';
-   // import Databases, { SelectedDatabase } from './Databases.vue';
-   //import { useWs } from '@/services';
+   import { defineComponent, provide } from 'vue';
+   import Databases from './Databases.vue';
+   import Workspace, { WidgetManager } from './Workspace.vue';
 
    export default defineComponent({
-      //components: { Databases },
+      components: { Workspace },
       props: {},
       setup() {
-         //const ws = useWs();
-         // const dbSelected = async (db: SelectedDatabase) => {
-         //    const cols = await ws.send({
-         //       name: 'mongo.database.listCollections',
-         //       connectionName: db.connectionName,
-         //       databaseName: db.databaseName,
-         //    });
-         //    console.log(cols.data);
-         // };
+         const manager = new WidgetManager();
+         provide(WidgetManager.INJECT, manager);
 
-         // return { dbSelected };
-
+         manager.add(Databases, {} as any);
          return {};
       },
    });

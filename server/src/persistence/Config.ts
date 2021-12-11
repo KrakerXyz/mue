@@ -11,7 +11,7 @@ export class Config {
 
    public readonly connections = {
       list: () => {
-         return this._ns.get('connections') as Promise<Connection[]>;
+         return this._ns.get('connections') as Promise<Connection[] | null>;
       },
       update: (connections: Connection[]) => {
          return this._ns.put('connections', connections);

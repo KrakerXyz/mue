@@ -1,3 +1,4 @@
+import { AbstractCursor } from 'mongodb';
 import { CommandClientMessage, CommandServerMessage } from './commands';
 import { Subscription, SubscriptionClientMessage, SubscriptionServerMessage } from './subscriptions';
 
@@ -16,3 +17,5 @@ export function isCommandClientMessage(msg: SubscriptionClientMessage | CommandC
 export function isCommandServerMessage(msg: CommandServerMessage | SubscriptionServerMessage): msg is CommandServerMessage {
    return msg.name.startsWith('command');
 }
+
+export type CursorType<T> = T extends AbstractCursor<infer I> ? I : never;

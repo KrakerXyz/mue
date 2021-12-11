@@ -1,4 +1,4 @@
-import { Config, Db } from '../persistence';
+import { Config, Db, Cache } from '../persistence';
 
 export class WorkspaceServices {
 
@@ -11,4 +11,9 @@ export class WorkspaceServices {
    public get config(): Config {
       return new Config(this._db);
    }
+
+   public get cache(): Cache {
+      return new Cache(this._db);
+   }
+
 }

@@ -1,6 +1,9 @@
 import { ConfigCommand } from './configCommands';
+export * from './configCommands';
+import { UnsubscribeSubscriptionCommand } from './unsubscribeSubscriptionCommand';
+export * from './unsubscribeSubscriptionCommand';
 
-export type Command = ConfigCommand;
+export type Command = ConfigCommand | UnsubscribeSubscriptionCommand;
 
 export interface CommandClientMessage<TData extends Command = Command> {
    id: string;

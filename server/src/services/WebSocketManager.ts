@@ -33,9 +33,7 @@ export class WebSocketManager {
 
                 const obs = subscriptionHandlers[msg.data.name](msg.data, connection.services);
 
-                connection.subscriptions.set(msg.id, { name: msg.data.name, observable: obs });
-
-                obs.subscribe(data => {
+                const sub = obs.subscribe(data => {
                     const serverMessage: SubscriptionServerMessage = {
                         data,
                         id: randomUUID(),
@@ -45,7 +43,18 @@ export class WebSocketManager {
                     connection.socket.send(JSON.stringify(serverMessage));
                 });
 
+                connection.subscriptions.set(msg.id, { name: msg.data.name, observable: obs, subscription: sub });
+
             } else {
+
+                if (msg.data.name === 'command.subscription.unsubscribe') {
+                    const sub = connection.subscriptions.get(msg.data.id);
+                    if (sub) {
+                        sub.subscription.unsubscribe();
+                        connection.subscriptions.delete(msg.data.id);
+                    }
+                    return;
+                }
 
                 const handler = commandHandlers[msg.data.name];
                 await handler(msg.data, connection.services);
@@ -70,5 +79,5 @@ export class WebSocketManager {
 interface Connection {
     socket: any;
     services: WorkspaceServices;
-    subscriptions: Map<string, { name: string, observable: Observable<SubscriptionDataType<any>> }>;
+    subscriptions: Map<string, { name: string, observable: Observable<SubscriptionDataType<any>>, subscription: ZenObservable.Subscription }>;
 }

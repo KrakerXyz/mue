@@ -1,27 +1,49 @@
 import { getConnection } from '../..';
-import { DatabasesListSubscription, SubscriptionDataType } from '@core/subscriptions';
+import { DatabaseListData, DatabasesListSubscription, SubscriptionDataType } from '@core/subscriptions';
 import Observable from 'zen-observable';
 import { Handler } from '..';
 
-export const databasesListHandler: Handler<DatabasesListSubscription> = (cmd) => {
+export const databasesListHandler: Handler<DatabasesListSubscription> = (cmd, services) => {
 
    return new Observable<SubscriptionDataType<DatabasesListSubscription>>(sub => {
+      let disposed = false;
+      let realSent = false;
+      const cacheKey = `${cmd.name}.${cmd.connection}`;
+      services.cache.get<DatabaseListData>(cacheKey).then(x => {
+         if (!x) { return; }
+         if (realSent) { return; }
+         if (disposed) { return; }
+         sub.next(x);
+      });
 
-      getConnection(cmd.name).then(c => {
-         c.db().admin().listDatabases().then(l => {
-            const dbs = l.databases;
+      services.config.connections.list().then(connections => {
+         if (disposed) { return; }
 
-            const data: SubscriptionDataType<DatabasesListSubscription> = {
-               connection: cmd.connection,
-               databases: dbs
-            };
+         const connection = connections?.find(c => c.name === cmd.connection);
+         if (!connection) { throw new Error(`Connection for ${cmd.connection} not found`); }
 
-            sub.next(data);
+         getConnection(connection.connectionString).then(c => {
+            if (disposed) { return; }
+
+            c.db().admin().listDatabases().then(l => {
+               if (disposed) { return; }
+               const dbs = l.databases;
+
+               const data: SubscriptionDataType<DatabasesListSubscription> = {
+                  connection: cmd.connection,
+                  databases: dbs
+               };
+
+               realSent = true;
+               sub.next(data);
+               services.cache.update(cacheKey, data);
+            });
          });
+
       });
 
       return () => {
-         //
+         disposed = true;
       };
 
    });

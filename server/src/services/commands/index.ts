@@ -8,4 +8,5 @@ type SubscriptionNames = Command['name'];
 
 export const commandHandlers: Record<SubscriptionNames, Handler<any>> = {
    'command.config.connections.update': config.connectionsUpdateHandler,
+   'command.subscription.unsubscribe': () => Promise.resolve() //This is handled by the websocket manager
 };
