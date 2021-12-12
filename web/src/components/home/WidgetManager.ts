@@ -58,14 +58,24 @@ export class WidgetManager {
 
    public readonly bringToFront = (w: Widget) => {
       const maxIndex = this._widgets.value.reduce((p, c) => Math.max(p, c.style.zIndex), 0);
-      if (maxIndex === w.style.zIndex) { return; }
+      if (maxIndex && maxIndex === w.style.zIndex) { return; }
       w.style.zIndex = maxIndex + 1;
+      const sorted = [...this._widgets.value].sort((a, b) => a.style.zIndex - b.style.zIndex);
+      for (let i = 0; i < sorted.length; i++) {
+         sorted[i].style.zIndex = i;
+      }
       this.updateState();
    };
 
    public readonly setPosition = (w: Widget, x: number, y: number) => {
-      w.style.top = `${y}px`;
-      w.style.left = `${x}px`;
+      if (x < 0) { x = 0; }
+      if (y < 0) { y = 0; }
+      if (x + 70 > window.innerWidth) { return; }
+      const newX = `${x}px`;
+      const newY = `${y}px`;
+      if (newX === w.style.left && newY === w.style.top) { return; }
+      w.style.left = newX;
+      w.style.top = newY;
       this.updateState();
    };
 

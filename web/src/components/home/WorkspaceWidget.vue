@@ -60,7 +60,6 @@
          };
 
          const dragStop = () => {
-            console.log('dragStop');
             window.removeEventListener('mouseup', dragStop);
             window.removeEventListener('mousemove', mouseMove);
             mouseMoveOrigin = null;
@@ -71,7 +70,6 @@
             if (!card) {
                return;
             }
-            console.log('startDrag');
             const parent = card.offsetParent as HTMLDivElement;
             mouseMoveOrigin = { x: evt.pageX, y: evt.pageY, offsetX: parent.offsetLeft, offsetY: parent.offsetTop };
             window.addEventListener('mousemove', mouseMove);
