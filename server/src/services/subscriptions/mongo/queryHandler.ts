@@ -27,6 +27,12 @@ export const queryHandler: Handler<QuerySubscription> = (cmd, services) => {
             let resultsSent = 0;
 
             await result.forEach(d => {
+
+               if (resultsSent >= 50) {
+                  result.close();
+                  return;
+               }
+
                if (disposed) {
                   result.close();
                   return;
@@ -36,22 +42,19 @@ export const queryHandler: Handler<QuerySubscription> = (cmd, services) => {
                if (results.length === 5) {
                   sub.next({
                      connection: cmd.connection,
-                     results
+                     results,
+                     complete: false
                   });
                   resultsSent += results.length;
                   results = [];
-
-                  if (resultsSent >= 50) {
-                     disposed = true;
-                     result.close();
-                  }
                }
             });
 
-            if (!disposed && results.length) {
+            if (!disposed) {
                sub.next({
                   connection: cmd.connection,
-                  results: results
+                  results: results,
+                  complete: true
                });
             }
 

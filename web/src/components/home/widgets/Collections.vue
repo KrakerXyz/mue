@@ -28,7 +28,7 @@
    import { useSubscriptionRef, useWs } from '@/services';
    import { computed, defineComponent, inject, ref } from 'vue';
    import WorkspaceWidget from '../WorkspaceWidget.vue';
-   import { WidgetManager } from '../Workspace.vue';
+   import { WidgetManager } from '../WidgetManager';
    import { Collection } from '@core/models';
 
    export default defineComponent({

@@ -33,7 +33,7 @@
    import { observableJoin, useSubscriptionRef, useWs } from '@/services';
    import { DatabaseListData } from '@core/subscriptions';
    import { defineComponent, watch, ref, computed, onUnmounted, inject } from 'vue';
-   import { WidgetManager } from '../Workspace.vue';
+   import { WidgetManager } from '../WidgetManager';
    import WorkspaceWidget from '../WorkspaceWidget.vue';
 
    export default defineComponent({

@@ -14,6 +14,7 @@
                </button>
             </div>
          </div>
+         <slot name="header2"></slot>
       </div>
       <div class="card-body flex-grow-1 overflow-hidden p-0">
          <slot name="body"></slot>
@@ -23,7 +24,7 @@
 
 <script lang="ts">
    import { defineComponent, inject } from 'vue';
-   import { WidgetManager } from './Workspace.vue';
+   import { WidgetManager } from './WidgetManager';
    import { Widget } from '@core/models';
 
    export default defineComponent({

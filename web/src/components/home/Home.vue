@@ -4,16 +4,15 @@
 
 <script lang="ts">
    import { useSubscription, useWs } from '@/services';
-   import { defineComponent, provide } from 'vue';
-   import Workspace, { WidgetManager } from './Workspace.vue';
+   import { defineComponent, inject } from 'vue';
+   import Workspace from './Workspace.vue';
+   import { WidgetManager } from './WidgetManager';
 
    export default defineComponent({
       components: { Workspace },
       props: {},
       setup() {
-         const manager = new WidgetManager();
-         provide(WidgetManager.INJECT, manager);
-
+         const manager = inject<WidgetManager>(WidgetManager.INJECT);
          const ws = useWs();
          useSubscription(
             ws.subscribe({
@@ -21,9 +20,9 @@
             }),
             (state) => {
                if (!state.widgets.length) {
-                  manager.add('databases', {} as any);
+                  manager?.add('databases', {} as any);
                } else {
-                  manager.setState(state);
+                  manager?.setState(state);
                }
             }
          );

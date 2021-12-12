@@ -30,10 +30,14 @@
 
 <script lang="ts">
    import { useWs } from '@/services';
-   import { defineComponent } from 'vue';
+   import { defineComponent, provide } from 'vue';
+   import { WidgetManager } from './home/WidgetManager';
 
    export default defineComponent({
       setup() {
+         const manager = new WidgetManager();
+         provide(WidgetManager.INJECT, manager);
+
          const ws = useWs();
          return { wsState: ws.state };
       },
