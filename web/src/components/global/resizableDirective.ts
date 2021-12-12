@@ -2,21 +2,21 @@
 import { Directive } from 'vue';
 
 export interface ResizableOptions {
-   change(event: SizeChangedEvent): void
+   change?(event: SizeChangedEvent): void
 }
 
 export interface SizeChangedEvent {
-   left: number
-   top: number;
-   width: number;
-   height: number;
+   left?: number
+   top?: number;
+   width?: number;
+   height?: number;
 }
 
 const CONTEXT = Symbol('ResizableDirective context');
 
 export const resizableDirective: Directive<HTMLElement, ResizableOptions | undefined> = {
    mounted(e, binding) {
-      const c = new ResizableContext(e, binding.value);
+      const c = new ResizableContext(e, binding.value ?? {});
       (e as any)[CONTEXT] = c;
    },
    unmounted(el) {
@@ -25,20 +25,34 @@ export const resizableDirective: Directive<HTMLElement, ResizableOptions | undef
    }
 };
 
+let lastActiveContext: ResizableContext | null = null;
+
 class ResizableContext {
 
    private _rects: ResizeRect[];
 
-   public constructor(public readonly el: HTMLElement, public readonly options: ResizableOptions | undefined) {
+   public constructor(public readonly el: HTMLElement, public readonly options: ResizableOptions) {
       window.addEventListener('mousemove', this.mouseMove, { passive: true, capture: true });
+      window.addEventListener('mousedown', this.mouseDown, { passive: true, capture: true });
+      window.addEventListener('mouseup', this.mouseUp, { passive: true, capture: true });
       this._rects = getResizeRects(el);
    }
 
    private _lastActive: ResizeRect | null = null;
 
+   private _mouseDownOrigin: { x: number, y: number, rect: { top: number; left: number, width: number, height: number; } } | null = null;
+
    private readonly mouseMove = (evt: MouseEvent) => {
 
       //console.log(`Mousemove ${this.el.id}`);
+      if (lastActiveContext && lastActiveContext !== this) {
+         return;
+      }
+
+      if (this._mouseDownOrigin) {
+         this.updateElement(evt);
+         return;
+      }
 
       for (const r of this._rects) {
          if (evt.clientX < r.left) { continue; }
@@ -48,7 +62,12 @@ class ResizableContext {
 
          document.documentElement.style.cursor = r.cursor;
          this._lastActive = r;
+         lastActiveContext = this;
          return;
+      }
+
+      if (lastActiveContext === this) {
+         lastActiveContext = null;
       }
 
       if (this._lastActive) {
@@ -57,8 +76,84 @@ class ResizableContext {
       }
    };
 
+   /** Called from mouseMove when there's a _mouseDownOrigin - they're actively dragging a edge */
+   private _newStyle: SizeChangedEvent | null = null;
+   private updateElement(evt: MouseEvent) {
+      if (!this._mouseDownOrigin || !this._lastActive) {
+         return;
+      }
+      const diff = { x: evt.x - this._mouseDownOrigin.x, y: evt.clientY - this._mouseDownOrigin.y };
+
+      this._newStyle = {};
+
+      if (this._lastActive.cursor === 'ew-resize') {
+         if (this._lastActive.side === 'right') {
+            this._newStyle.width = this._mouseDownOrigin.rect.width + diff.x;
+         } else {
+            this._newStyle.width = this._mouseDownOrigin.rect.width + (diff.x * -1);
+            this._newStyle.left = this._mouseDownOrigin.rect.left + diff.x;
+         }
+      } else if (this._lastActive.cursor === 'ns-resize') {
+         if (this._lastActive.side === 'bottom') {
+            this._newStyle.height = this._mouseDownOrigin.rect.height + diff.y;
+         } else {
+            this._newStyle.height = this._mouseDownOrigin.rect.height + (diff.y * -1);
+            this._newStyle.top = this._mouseDownOrigin.rect.top + diff.y;
+         }
+      } else if (this._lastActive.cursor === 'nwse-resize') {
+         if (this._lastActive.side === 'top') {
+            this._newStyle.width = this._mouseDownOrigin.rect.width + (diff.x * -1);
+            this._newStyle.left = this._mouseDownOrigin.rect.left + diff.x;
+            this._newStyle.height = this._mouseDownOrigin.rect.height + (diff.y * -1);
+            this._newStyle.top = this._mouseDownOrigin.rect.top + diff.y;
+         } else {
+            this._newStyle.width = this._mouseDownOrigin.rect.width + diff.x;
+            this._newStyle.height = this._mouseDownOrigin.rect.height + diff.y;
+         }
+      } else if (this._lastActive.cursor === 'nesw-resize') {
+         if (this._lastActive.side === 'top') {
+            this._newStyle.width = this._mouseDownOrigin.rect.width + diff.x;
+            this._newStyle.height = this._mouseDownOrigin.rect.height + (diff.y * -1);
+            this._newStyle.top = this._mouseDownOrigin.rect.top + diff.y;
+         } else {
+            this._newStyle.height = this._mouseDownOrigin.rect.height + diff.y;
+            this._newStyle.width = this._mouseDownOrigin.rect.width + (diff.x * -1);
+            this._newStyle.left = this._mouseDownOrigin.rect.left + diff.x;
+         }
+      }
+
+      Object.getOwnPropertyNames(this._newStyle).map(p => {
+         const v = (this._newStyle as any)[p];
+         if (v === undefined) { return; }
+         const css = `${v}px`;
+         (this.el.style as any)[p] = css;
+      });
+
+   }
+
+   private readonly mouseDown = (evt: MouseEvent) => {
+      if (!this._lastActive) { return; }
+      this.el.style.userSelect = 'none';
+      this._mouseDownOrigin = { x: evt.clientX, y: evt.clientY, rect: { top: this.el.offsetTop, left: this.el.offsetLeft, height: this.el.offsetHeight, width: this.el.offsetWidth } };
+   };
+
+   private readonly mouseUp = () => {
+      if (!this._mouseDownOrigin || !this._lastActive) {
+         return;
+      }
+      this.el.style.userSelect = '';
+      this._mouseDownOrigin = null;
+      if (this._newStyle && this.options.change) { this.options.change(this._newStyle); }
+      this._newStyle = null;
+      setTimeout(() => {
+         this._rects = getResizeRects(this.el);
+      });
+   };
+
    public unmount() {
       window.removeEventListener('mousemove', this.mouseMove);
+      window.removeEventListener('mouseup', this.mouseUp);
+      window.removeEventListener('mousedown', this.mouseDown);
    }
 
 }
@@ -69,6 +164,7 @@ interface ResizeRect {
    left: number;
    right: number;
    cursor: string;
+   side: 'top' | 'right' | 'bottom' | 'left'
 }
 
 
@@ -85,7 +181,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.top + corner,
          left: rect.left - width,
          right: rect.left + width,
-         cursor: 'nwse-resize'
+         cursor: 'nwse-resize',
+         side: 'top'
       },
       //TOP
       {
@@ -93,7 +190,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.top + width,
          left: rect.left + corner,
          right: rect.right - corner,
-         cursor: 'ns-resize'
+         cursor: 'ns-resize',
+         side: 'top'
       },
       //TOP-RIGHT
       {
@@ -101,7 +199,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.top + width,
          left: rect.right - corner,
          right: rect.right + width,
-         cursor: 'nesw-resize'
+         cursor: 'nesw-resize',
+         side: 'top'
       },
       //RIGHT
       {
@@ -109,7 +208,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.bottom - corner,
          left: rect.right - width,
          right: rect.right + width,
-         cursor: 'ew-resize'
+         cursor: 'ew-resize',
+         side: 'right'
       },
       //BOTTOM-RIGHT
       {
@@ -117,15 +217,17 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.bottom + width,
          left: rect.right - width,
          right: rect.right + width,
-         cursor: 'nwse-resize'
+         cursor: 'nwse-resize',
+         side: 'bottom'
       },
-      //BOTTOm
+      //BOTTOM
       {
          top: rect.bottom - width,
          bottom: rect.bottom + width,
          left: rect.left + corner,
          right: rect.right - corner,
-         cursor: 'ns-resize'
+         cursor: 'ns-resize',
+         side: 'bottom'
       },
       //BOTTOM-LEFT
       {
@@ -133,7 +235,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.bottom + width,
          left: rect.left - width,
          right: rect.left + width,
-         cursor: 'nesw-resize'
+         cursor: 'nesw-resize',
+         side: 'bottom'
       },
       //LEFT
       {
@@ -141,7 +244,8 @@ function getResizeRects(el: HTMLElement): ResizeRect[] {
          bottom: rect.bottom - corner,
          left: rect.left - width,
          right: rect.left + width,
-         cursor: 'ew-resize'
+         cursor: 'ew-resize',
+         side: 'left'
       }
    ];
 }

@@ -56,7 +56,7 @@
             }
             const diffX = evt.pageX - mouseMoveOrigin.x;
             const diffY = evt.pageY - mouseMoveOrigin.y;
-            widgetManager?.setPosition(widget, diffX + mouseMoveOrigin.offsetX, diffY + mouseMoveOrigin.offsetY);
+            widgetManager?.setPosition(widget, { left: diffX + mouseMoveOrigin.offsetX, top: diffY + mouseMoveOrigin.offsetY });
          };
 
          const dragStop = () => {

@@ -45,7 +45,7 @@
          const getResizableOptions = (w: Widget) => {
             const opts: ResizableOptions = {
                change: (r) => {
-                  console.log('change', { id: w.id, event: r });
+                  manager.setPosition(w, r);
                },
             };
             return opts;

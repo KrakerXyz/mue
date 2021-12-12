@@ -69,15 +69,13 @@ export class WidgetManager {
       this.updateState();
    };
 
-   public readonly setPosition = (w: Widget, x: number, y: number) => {
-      if (x < 0) { x = 0; }
-      if (y < 0) { y = 0; }
-      if (x + 70 > window.innerWidth) { return; }
-      const newX = `${x}px`;
-      const newY = `${y}px`;
-      if (newX === w.style.left && newY === w.style.top) { return; }
-      w.style.left = newX;
-      w.style.top = newY;
+   public readonly setPosition = (w: Widget, rect: { left?: number, top?: number, width?: number, height?: number }) => {
+      Object.getOwnPropertyNames(rect).map(p => {
+         const v = (rect as any)[p];
+         if (v === undefined) { return; }
+         const css = `${v}px`;
+         (w.style as any)[p] = css;
+      });
       this.updateState();
    };
 
