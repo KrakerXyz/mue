@@ -66,6 +66,9 @@
          };
 
          const startDrag = (evt: MouseEvent) => {
+            if (widget.maximized) {
+               return;
+            }
             const card = (evt.target as HTMLElement).closest('.card') as HTMLDivElement;
             if (!card) {
                return;

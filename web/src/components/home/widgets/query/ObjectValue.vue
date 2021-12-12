@@ -43,19 +43,23 @@
          };
 
          const filteredFields = computed(() => {
-            if (!props.context.hideEmpty) {
-               return props.value.fields;
-            }
             return props.value.fields.filter((f) => {
-               if (f.value.type === 'object' && !f.value.fields.length) {
+               if (props.context.hideEmpty) {
+                  if (f.value.type === 'object' && !f.value.fields.length) {
+                     return false;
+                  }
+                  if (f.value.type === 'array' && !f.value.values.length) {
+                     return false;
+                  }
+                  if (f.value.type === 'string' && !f.value.value) {
+                     return false;
+                  }
+               }
+
+               if (props.context.hidePaths.includes(f.path)) {
                   return false;
                }
-               if (f.value.type === 'array' && !f.value.values.length) {
-                  return false;
-               }
-               if (f.value.type === 'string' && !f.value.value) {
-                  return false;
-               }
+
                return true;
             });
          });

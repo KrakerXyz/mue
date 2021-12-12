@@ -6,6 +6,7 @@ import ObjectValueVue from './ObjectValue.vue';
 export interface ResultContext {
    hideEmpty: boolean;
    expandAll: boolean;
+   hidePaths: string[];
 }
 
 export class ObjectValue {
@@ -58,9 +59,13 @@ export class Field {
 
    public constructor(public readonly key: string, v: any, public readonly parent: ObjectValue) {
       this.value = createValue(v, this);
+      this.path = parent.parent?.path ?? '';
+      this.path += (this.path ? '.' : '') + key;
    }
 
    public readonly value: FieldValue;
+
+   public readonly path: string;
 
 }
 

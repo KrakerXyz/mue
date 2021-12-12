@@ -49,6 +49,9 @@
                      <label class="form-check-label" for="expand-all">Expand All</label>
                   </div>
                </div>
+               <div class="col-auto" v-if="context.hidePaths.length">
+                  <span role="button" @click="showFields()"><i class="fal fa-eye"></i> {{ context.hidePaths.length }} hidden fields</span>
+               </div>
             </div>
             <div class="list-group flex-grow-1 overflow-auto">
                <div class="list-group-item" v-for="r of results" :key="r.id">
@@ -79,6 +82,7 @@
          database: { type: String, required: true },
          collection: { type: String, required: true },
          query: { type: String },
+         resultContext: { type: Object as () => ResultContext },
       },
       emits: {
          'update-props': (value: Record<string, any>) => !!value,
@@ -159,7 +163,21 @@
          const context: ResultContext = reactive({
             hideEmpty: false,
             expandAll: false,
+            hidePaths: [],
+            ...(props.resultContext ?? {}),
          });
+
+         const showFields = () => {
+            context.hidePaths = [];
+         };
+
+         watch(
+            context,
+            (c) => {
+               emit('update-props', { resultContext: c });
+            },
+            { deep: true }
+         );
 
          onUnmounted(() => sub?.unsubscribe());
 
@@ -167,7 +185,7 @@
             exec();
          }
 
-         return { queryString, invalid, exec, results, isRunning, context, parsed };
+         return { queryString, invalid, exec, results, isRunning, context, parsed, showFields };
       },
    });
 </script>
