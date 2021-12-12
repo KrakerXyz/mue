@@ -1,7 +1,7 @@
 <template>
-   <div role="button" class="font-monospace" @click.stop.prevent="toggleExpanded()">
+   <div class="font-monospace">
       <div class="row g-2">
-         <div class="col-auto text-success">
+         <div class="col-auto text-success" role="button" @click="toggleExpanded()">
             <i class="fas fa-brackets-curly fa-fw"></i>
          </div>
          <div class="col text-truncate" v-if="!value.state.expanded && !context.expandAll">

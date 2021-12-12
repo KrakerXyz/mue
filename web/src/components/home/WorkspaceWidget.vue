@@ -1,8 +1,11 @@
 <template>
    <div class="card h-100">
-      <div class="card-header">
-         <div class="row">
-            <div class="col">
+      <div class="card-header px-2">
+         <div class="row g-0">
+            <div class="col-auto d-flex align-items-center">
+               <slot name="header-icon"></slot>
+            </div>
+            <div class="col mx-2">
                <slot name="header"></slot>
             </div>
             <div class="col-auto">

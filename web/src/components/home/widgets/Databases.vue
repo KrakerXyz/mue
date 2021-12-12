@@ -1,10 +1,10 @@
 <template>
    <workspace-widget>
+      <template #header-icon>
+         <i class="fal fa-database fa-fw fa-3x"></i>
+      </template>
       <template #header>
          <div class="row g-2">
-            <div class="col-auto d-flex align-items-center">
-               <i class="fal fa-database fa-fw fa-3x"></i>
-            </div>
             <div class="col">
                <div class="form-floating">
                   <input id="name-filter" class="form-control" placeholder="*" v-model="nameFilter" />

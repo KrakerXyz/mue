@@ -1,20 +1,21 @@
 <template>
    <workspace-widget>
+      <template #header-icon>
+         <i class="fal fa-list fa-fw fa-3x"></i>
+      </template>
       <template #header>
          <div class="row g-2">
             <div class="col-auto">
-               <i class="fal fa-list fa-fw"></i>
-            </div>
-            <div class="col-auto">
-               {{ database }}
-            </div>
-            <div class="col">
-               <template v-if="parsed">
+               <div class="mb-0 fw-bold">
+                  {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
+               </div>
+               <div v-if="parsed">
                   <span class="text-muted small">{{ parsed.command }}(</span>
                   <span class="font-monospace small mx-1">{{ JSON.stringify(parsed.query) }}</span>
                   <span class="text-muted small">)</span>
-               </template>
+               </div>
             </div>
+            <div class="col"></div>
             <div class="col-auto">
                <span class="badge bg-primary">{{ connection }}</span>
             </div>
