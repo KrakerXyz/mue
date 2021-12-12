@@ -25,7 +25,7 @@ export class WebSocketManager {
 
         connection.socket.on('message', async (buf: Buffer) => {
             const msg: SubscriptionClientMessage | CommandClientMessage = JSON.parse(buf.toString());
-            log.info('WS message', msg);
+            log.info(`WS: ${msg.data.name}`);
 
             if (isSubscriptionClientMessage(msg)) {
 

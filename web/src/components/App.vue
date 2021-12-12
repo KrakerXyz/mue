@@ -6,6 +6,9 @@
                <!-- <li class="nav-item">
                   <router-link class="nav-link" :to="{ name: 'home' }">Home</router-link>
                </li> -->
+               <li class="nav-item">
+                  <button class="btn btn-link nav-link" @click="openDatabases()"><i class="fal fa-database fa-fw"></i> Databases</button>
+               </li>
             </ul>
 
             <span class="navbar-text">
@@ -39,7 +42,12 @@
          provide(WidgetManager.INJECT, manager);
 
          const ws = useWs();
-         return { wsState: ws.state };
+
+         const openDatabases = () => {
+            manager.add('databases', {});
+         };
+
+         return { wsState: ws.state, openDatabases };
       },
    });
 </script>

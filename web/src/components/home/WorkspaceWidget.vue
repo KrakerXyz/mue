@@ -3,7 +3,9 @@
       <div class="card-header px-2">
          <div class="row g-0">
             <div class="col-auto d-flex align-items-center">
-               <slot name="header-icon"></slot>
+               <div @mousedown="($event: MouseEvent) => startDrag($event)">
+                  <slot name="header-icon"></slot>
+               </div>
             </div>
             <div class="col mx-2">
                <slot name="header"></slot>
@@ -26,7 +28,7 @@
 </template>
 
 <script lang="ts">
-   import { defineComponent, inject } from 'vue';
+   import { defineComponent, inject, onUnmounted } from 'vue';
    import { WidgetManager } from './WidgetManager';
    import { Widget } from '@core/models';
 
@@ -47,7 +49,38 @@
             widgetManager?.toggleMaximized(widget);
          };
 
-         return { close, maximize };
+         let mouseMoveOrigin: { x: number; y: number; offsetX: number; offsetY: number } | null = null;
+         const mouseMove = (evt: MouseEvent) => {
+            if (!mouseMoveOrigin) {
+               return;
+            }
+            const diffX = evt.pageX - mouseMoveOrigin.x;
+            const diffY = evt.pageY - mouseMoveOrigin.y;
+            widgetManager?.setPosition(widget, diffX + mouseMoveOrigin.offsetX, diffY + mouseMoveOrigin.offsetY);
+         };
+
+         const dragStop = () => {
+            console.log('dragStop');
+            window.removeEventListener('mouseup', dragStop);
+            window.removeEventListener('mousemove', mouseMove);
+            mouseMoveOrigin = null;
+         };
+
+         const startDrag = (evt: MouseEvent) => {
+            const card = (evt.target as HTMLElement).closest('.card') as HTMLDivElement;
+            if (!card) {
+               return;
+            }
+            console.log('startDrag');
+            const parent = card.offsetParent as HTMLDivElement;
+            mouseMoveOrigin = { x: evt.pageX, y: evt.pageY, offsetX: parent.offsetLeft, offsetY: parent.offsetTop };
+            window.addEventListener('mousemove', mouseMove);
+            window.addEventListener('mouseup', dragStop);
+         };
+
+         onUnmounted(() => dragStop());
+
+         return { close, maximize, startDrag };
       },
    });
 </script>

@@ -17,7 +17,7 @@ export class WidgetManager {
       return this._widgets;
    }
 
-   public add(component: string, props: Record<string, any>) {
+   public add(component: 'databases' | 'query' | 'collections', props: Record<string, any>) {
       const newWidget: Widget = {
          id: v4(),
          component,
@@ -63,6 +63,12 @@ export class WidgetManager {
       this.updateState();
    };
 
+   public readonly setPosition = (w: Widget, x: number, y: number) => {
+      w.style.top = `${y}px`;
+      w.style.left = `${x}px`;
+      this.updateState();
+   };
+
    public readonly setState = (state: WorkspaceState) => {
       this._widgets.value = state.widgets;
    };
@@ -81,7 +87,7 @@ export class WidgetManager {
                widgets: this._widgets.value,
             },
          });
-      }, 3000);
+      }, 2000);
    }
 
    public readonly updateProps = (w: Widget, props: Record<string, any>) => {

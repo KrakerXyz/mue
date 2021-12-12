@@ -6,8 +6,11 @@
       <template #header>
          <div class="row g-2">
             <div class="col-auto">
-               <div class="mb-0 fw-bold">
-                  {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
+               <div class="mb-0">
+                  <span class="fw-bold">
+                     {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
+                  </span>
+                  <span v-if="results.length" class="ms-2 text-muted">{{ results.length }} result{{ results.length > 1 ? 's' : '' }}</span>
                </div>
                <div v-if="parsed">
                   <span class="text-muted small">{{ parsed.command }}(</span>
