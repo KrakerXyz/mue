@@ -58,9 +58,9 @@ type FieldValue = StringValue | ObjectValue | NumberValue | BooleanValue | Array
 export class Field {
 
    public constructor(public readonly key: string, v: any, public readonly parent: ObjectValue) {
-      this.value = createValue(v, this);
       this.path = parent.parent?.path ?? '';
       this.path += (this.path ? '.' : '') + key;
+      this.value = createValue(v, this);
    }
 
    public readonly value: FieldValue;

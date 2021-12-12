@@ -75,8 +75,8 @@
             }
             const parent = card.offsetParent as HTMLDivElement;
             mouseMoveOrigin = { x: evt.pageX, y: evt.pageY, offsetX: parent.offsetLeft, offsetY: parent.offsetTop };
-            window.addEventListener('mousemove', mouseMove);
-            window.addEventListener('mouseup', dragStop);
+            window.addEventListener('mousemove', mouseMove, true);
+            window.addEventListener('mouseup', dragStop, true);
          };
 
          onUnmounted(() => dragStop());

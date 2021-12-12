@@ -1,10 +1,12 @@
 <template>
    <div class="h-100 w-100 bg-secondary position-relative">
       <div
-         class="position-absolute bg-white shadow col-5 h-25"
-         :class="{ rounded: !w.maximized }"
          v-for="w of widgets"
          :key="w.id"
+         :id="w.id"
+         v-resizable="getResizableOptions(w)"
+         class="position-absolute bg-white shadow"
+         :class="{ rounded: !w.maximized }"
          :style="w.maximized ? { ...maximizedStyle, zIndex: w.style.zIndex } : w.style"
          @click="bringToFront(w)"
       >
@@ -18,8 +20,9 @@
    import Collections from './widgets/Collections.vue';
    import Databases from './widgets/Databases.vue';
    import Query from './widgets/query/Query.vue';
-   import { WidgetStyle } from '@core/models';
+   import { Widget, WidgetStyle } from '@core/models';
    import { WidgetManager } from './WidgetManager';
+   import { ResizableOptions } from '../global/resizableDirective';
 
    export default defineComponent({
       components: {
@@ -39,7 +42,16 @@
             width: '100% !important',
          };
 
-         return { widgets: manager.widgets, bringToFront: manager.bringToFront, maximizedStyle, updateProps: manager.updateProps };
+         const getResizableOptions = (w: Widget) => {
+            const opts: ResizableOptions = {
+               change: (r) => {
+                  console.log('change', { id: w.id, event: r });
+               },
+            };
+            return opts;
+         };
+
+         return { widgets: manager.widgets, bringToFront: manager.bringToFront, maximizedStyle, updateProps: manager.updateProps, getResizableOptions };
       },
    });
 </script>

@@ -25,6 +25,8 @@ export class WidgetManager {
          style: {
             top: `${this._widgets.value.length * 40 + 5}px`,
             left: `${this._widgets.value.length * 40 + 5}px`,
+            height: '50%',
+            width: '50%',
             zIndex: 0,
          },
          maximized: false,
@@ -81,6 +83,14 @@ export class WidgetManager {
 
    public readonly setState = (state: WorkspaceState) => {
       this._widgets.value = state.widgets;
+      let updated = false;
+      for (const w of this._widgets.value) {
+         if (!w.style.width) { w.style.width = '50%'; updated = true; }
+         if (!w.style.height) { w.style.height = '50%'; updated = true; }
+      }
+      if (updated) {
+         this.updateState();
+      }
    };
 
    // eslint-disable-next-line no-undef
