@@ -1,20 +1,49 @@
 import { v4 } from 'uuid';
-import { markRaw } from 'vue';
-import ArrayValueVue from './ArrayValue.vue';
-import ObjectValueVue from './ObjectValue.vue';
+import { deepFreeze } from '@core/util';
 
 export interface ResultContext {
+   sortFields: boolean;
    hideEmpty: boolean;
    expandAll: boolean;
    hidePaths: string[];
+   expandedPaths: {
+      global: string[],
+      /** Expanded paths specific to a record by it's index in the results */
+      indexed: Record<number, string[]>
+   };
+   favorite: boolean;
+   locked: boolean;
+   results: { created: number, data: Record<string, any>[] } | null;
 }
+
+export const defaultResultContext: ResultContext = deepFreeze({
+   sortFields: false,
+   hideEmpty: false,
+   expandAll: false,
+   hidePaths: [],
+   expandedPaths: { global: [], indexed: {} },
+   favorite: false,
+   results: null,
+   locked: false
+});
 
 export class ObjectValue {
 
    public readonly type = 'object';
-   public readonly component = markRaw(ObjectValueVue);
+   public readonly component = 'v-object-value';
+   public readonly root: ObjectValueRoot;
 
    constructor(public readonly result: Record<string, any>, public readonly parent?: Field) {
+
+      if (this instanceof ObjectValueRoot) {
+         this.root = this;
+      } else {
+         const root = this.parent?.parent.root;
+         if (!root) {
+            throw new Error('Could not determine root. Are you using ObjectValueRoot for new object?');
+         }
+         this.root = root;
+      }
 
       this.id = result['_id'] ?? v4();
 
@@ -47,10 +76,12 @@ export class ObjectValue {
 
    public readonly id: string;
 
-   public readonly state = {
-      expanded: false
-   };
+}
 
+export class ObjectValueRoot extends ObjectValue {
+   public constructor(public readonly result: Record<string, any>, public index: number, public readonly context: ResultContext) {
+      super(result, undefined);
+   }
 }
 
 type FieldValue = StringValue | ObjectValue | NumberValue | BooleanValue | ArrayValue;
@@ -137,7 +168,7 @@ export class BooleanValue {
 
 export class ArrayValue {
    public readonly type = 'array';
-   public readonly component = markRaw(ArrayValueVue);
+   public readonly component = 'v-array-value';
 
    public constructor(public readonly value: any[], public readonly parent: Field) {
       this.values = value.map(v => createValue(v, parent));
@@ -150,7 +181,4 @@ export class ArrayValue {
    public readonly formatted: string;
    public readonly formattedJson: string;
 
-   public readonly state = {
-      expanded: false
-   };
 }

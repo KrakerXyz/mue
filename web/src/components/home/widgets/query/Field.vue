@@ -1,6 +1,6 @@
 <template>
    <div class="row">
-      <div class="col-4 col-md-3 col-lg-1 text-truncate" :title="value.key">
+      <div class="col-4 col-md-3 col-lg-2 text-truncate" :title="value.path">
          <span class="text-muted small" role="button" @click="hideField()"><i class="fal fa-eye-slash"></i></span> {{ value.key }}
       </div>
       <div v-if="!value.value.component" class="col text-truncate">

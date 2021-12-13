@@ -8,7 +8,7 @@
             <div class="col">
                <div class="form-floating">
                   <input id="name-filter" class="form-control" placeholder="*" v-model="nameFilter" />
-                  <label for="name-filter">Name Filter</label>
+                  <label for="name-filter">Databases</label>
                </div>
             </div>
          </div>

@@ -1,10 +1,20 @@
 import { App } from 'vue';
+import ArrayValueVue from '../home/widgets/query/ArrayValue.vue';
+import FieldVue from '../home/widgets/query/Field.vue';
+import ObjectValueVue from '../home/widgets/query/ObjectValue.vue';
+import ConfirmationModalVue from './ConfirmationModal.vue';
+import CreatedVue from './Created.vue';
+import ModalVue from './Modal.vue';
 import { resizableDirective } from './resizableDirective';
+import SpinnerVue from './Spinner.vue';
 
 export function registerGlobalComponents(vueApp: App) {
-   vueApp.component('v-spinner', () => import('@/components/global/Spinner.vue'));
-   vueApp.component('v-modal', () => import('@/components/global/Modal.vue'));
-   vueApp.component('v-confirmation-modal', () => import('@/components/global/ConfirmationModal.vue'));
-   vueApp.component('v-created', () => import('@/components/global/Created.vue'));
+   vueApp.component('v-spinner', SpinnerVue);
+   vueApp.component('v-modal', ModalVue);
+   vueApp.component('v-confirmation-modal', ConfirmationModalVue);
+   vueApp.component('v-created', CreatedVue);
    vueApp.directive('resizable', resizableDirective);
+   vueApp.component('v-object-value', ObjectValueVue);
+   vueApp.component('v-array-value', ArrayValueVue);
+   vueApp.component('v-field', FieldVue);
 }

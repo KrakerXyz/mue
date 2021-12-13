@@ -27,16 +27,28 @@
       <template #header2>
          <div class="row g-0 mt-2">
             <div class="col">
-               <textarea class="form-control font-monospace" :class="{ 'is-invalid': invalid }" v-model="queryString" spellcheck="false"></textarea>
+               <textarea
+                  class="form-control font-monospace"
+                  :class="{ 'is-invalid': invalid }"
+                  v-model="queryString"
+                  spellcheck="false"
+                  :disabled="context.locked"
+               ></textarea>
             </div>
             <div class="col-auto">
-               <button class="btn btn-primary h-100" @click="exec()" :disabled="invalid || isRunning">Run</button>
+               <button v-if="!context.locked" class="btn btn-primary h-100" @click="exec()" :disabled="invalid || isRunning">Run</button>
             </div>
          </div>
       </template>
       <template #body v-if="results">
          <div class="h-100 d-flex flex-column">
             <div class="row m-2">
+               <div class="col-auto">
+                  <div class="form-check">
+                     <input class="form-check-input" type="checkbox" id="sort-fields" v-model="context.sortFields" />
+                     <label class="form-check-label" for="sort-fields">Sort Fields</label>
+                  </div>
+               </div>
                <div class="col-auto">
                   <div class="form-check">
                      <input class="form-check-input" type="checkbox" id="hide-empty" v-model="context.hideEmpty" />
@@ -50,13 +62,42 @@
                   </div>
                </div>
                <div class="col-auto" v-if="context.hidePaths.length">
-                  <span role="button" @click="showFields()"><i class="fal fa-eye"></i> {{ context.hidePaths.length }} hidden fields</span>
+                  <div class="hidden-paths position-relative">
+                     <span><i class="fal fa-eye"></i> {{ context.hidePaths.length }} hidden paths</span>
+                     <div class="hidden-list d-none position-absolute list-group list-group-flush border shadow-sm">
+                        <div class="list-group-item bg-light" v-for="p of context.hidePaths" :key="p">
+                           <div class="row">
+                              <div class="col">{{ p }}</div>
+                              <div class="col-auto">
+                                 <button class="btn p-0" @click="showPath(p)"><i class="fal fa-eye"></i></button>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div class="col d-flex justify-content-end">
+                  <button v-if="!context.locked" class="btn p-0 me-2" @click="context.locked = true">
+                     <i class="fal fa-lock-open"></i>
+                  </button>
+                  <button v-if="context.locked" class="btn p-0 me-2" @click="context.locked = false">
+                     <i class="fal fa-lock"></i>
+                  </button>
+                  <button v-if="!context.favorite" class="btn p-0" @click="context.favorite = true">
+                     <i class="fal fa-star"></i>
+                  </button>
+                  <button v-if="context.favorite" class="btn p-0 text-warning" @click="context.favorite = false">
+                     <i class="fas fa-star"></i>
+                  </button>
                </div>
             </div>
             <div class="list-group flex-grow-1 overflow-auto">
                <div class="list-group-item" v-for="r of results" :key="r.id">
                   <object-value :value="r" :context="context"></object-value>
                </div>
+            </div>
+            <div v-if="context.results" class="row p-2 bg-light small text-muted">
+               <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
             </div>
          </div>
       </template>
@@ -69,13 +110,20 @@
    import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
    import WorkspaceWidget from '../../WorkspaceWidget.vue';
    import JSON5 from 'json5';
-   import { ObjectValue, ResultContext } from './ResultObjects';
+   import { defaultResultContext, ObjectValue, ObjectValueRoot, ResultContext } from './ResultObjects';
    import ObjectValueVue from './ObjectValue.vue';
+   import ArrayValueVue from './ArrayValue.vue';
+   import { deepClone } from '@core/util';
+   import FieldVue from './Field.vue';
 
    export default defineComponent({
       components: {
          WorkspaceWidget,
          'object-value': ObjectValueVue,
+         // eslint-disable-next-line vue/no-unused-components
+         'array-value': ArrayValueVue,
+         // eslint-disable-next-line vue/no-unused-components
+         field: FieldVue,
       },
       props: {
          connection: { type: String, required: true },
@@ -145,30 +193,41 @@
                return;
             }
             results.value = reactive([]);
+            const rawResults: Record<string, any>[] = [];
+            const newResults: ObjectValue[] = [];
 
             isRunning.value = true;
+
+            const now = Date.now();
             const obs = ws.subscribe(parsed.value);
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
-                  const v = new ObjectValue(r);
-                  results.value.push(v);
+                  rawResults.push(r);
+                  const v = new ObjectValueRoot(r, newResults.length, context);
+                  newResults.push(v);
                }
+               results.value = newResults;
                if (d.complete) {
+                  console.debug(`Finished query in ${Date.now() - now}ms with ${newResults.length} records`);
+                  context.results = { created: Date.now(), data: rawResults };
                   isRunning.value = false;
                }
             });
          };
 
          const context: ResultContext = reactive({
-            hideEmpty: false,
-            expandAll: false,
-            hidePaths: [],
+            ...defaultResultContext,
+            ...{ expandedPaths: deepClone(defaultResultContext.expandedPaths) },
             ...(props.resultContext ?? {}),
          });
 
-         const showFields = () => {
-            context.hidePaths = [];
+         const showPath = (p: string) => {
+            const index = context.hidePaths.indexOf(p);
+            if (index === -1) {
+               return;
+            }
+            context.hidePaths.splice(index, 1);
          };
 
          watch(
@@ -181,11 +240,24 @@
 
          onUnmounted(() => sub?.unsubscribe());
 
-         if (!invalid.value) {
+         if (!invalid.value && !context.results) {
             exec();
          }
 
-         return { queryString, invalid, exec, results, isRunning, context, parsed, showFields };
+         if (context.results) {
+            results.value = context.results.data.map((r, index) => new ObjectValueRoot(r, index, context));
+            console.debug('Set results from context results');
+         }
+
+         return { queryString, invalid, exec, results, isRunning, context, parsed, showPath };
       },
    });
 </script>
+
+<style lang="postcss" scoped>
+   .hidden-paths:hover > .hidden-list {
+      min-width: 300px;
+      z-index: 1;
+      display: block !important;
+   }
+</style>

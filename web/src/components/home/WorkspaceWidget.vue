@@ -1,9 +1,9 @@
 <template>
    <div class="card h-100">
-      <div class="card-header px-2">
+      <div class="card-header px-2" @mousedown="($event: MouseEvent) => startDrag($event)">
          <div class="row g-0">
             <div class="col-auto d-flex align-items-center">
-               <div @mousedown="($event: MouseEvent) => startDrag($event)">
+               <div>
                   <slot name="header-icon"></slot>
                </div>
             </div>
@@ -77,6 +77,7 @@
             mouseMoveOrigin = { x: evt.pageX, y: evt.pageY, offsetX: parent.offsetLeft, offsetY: parent.offsetTop };
             window.addEventListener('mousemove', mouseMove, true);
             window.addEventListener('mouseup', dragStop, true);
+            widgetManager?.bringToFront(widget);
          };
 
          onUnmounted(() => dragStop());

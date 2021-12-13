@@ -105,7 +105,7 @@ export class WidgetManager {
                widgets: this._widgets.value,
             },
          });
-      }, 2000);
+      }, 700);
    }
 
    public readonly updateProps = (w: Widget, props: Record<string, any>) => {
