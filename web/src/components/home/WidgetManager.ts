@@ -34,6 +34,7 @@ export class WidgetManager {
 
       setTimeout(() => {
          this.bringToFront(newWidget);
+         if (!newWidget.maximized && this._widgets.value.some(w => w.maximized)) { this.toggleMaximized(newWidget); }
          this._widgets.value = [...this._widgets.value, newWidget];
          this.updateState();
       });

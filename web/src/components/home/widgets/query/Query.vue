@@ -204,7 +204,7 @@
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
                   rawResults.push(r);
-                  const v = new ObjectValueRoot(r, newResults.length, context);
+                  const v = new ObjectValueRoot(r, newResults.length, context, props.connection, props.database, props.collection);
                   newResults.push(v);
                }
                results.value = newResults;
@@ -245,7 +245,7 @@
          }
 
          if (context.results) {
-            results.value = context.results.data.map((r, index) => new ObjectValueRoot(r, index, context));
+            results.value = context.results.data.map((r, index) => new ObjectValueRoot(r, index, context, props.connection, props.database, props.collection));
             console.debug('Set results from context results');
          }
 

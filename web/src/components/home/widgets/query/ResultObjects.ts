@@ -79,7 +79,7 @@ export class ObjectValue {
 }
 
 export class ObjectValueRoot extends ObjectValue {
-   public constructor(public readonly result: Record<string, any>, public index: number, public readonly context: ResultContext) {
+   public constructor(public readonly result: Record<string, any>, public index: number, public readonly context: ResultContext, public readonly connection: string, public readonly database: string, public readonly collection: string) {
       super(result, undefined);
    }
 }
@@ -131,7 +131,7 @@ function createValue(v: any, parent: Field): FieldValue {
 export class StringValue {
 
    public readonly type = 'string';
-   public readonly component = null;
+   public readonly component = 'v-string-value';
 
    public constructor(public readonly value: string, public readonly parent: Field) {
    }

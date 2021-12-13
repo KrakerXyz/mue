@@ -57,3 +57,9 @@
       cursor: pointer;
    }
 </style>
+
+<style>
+   .text-orange {
+      color: var(--bs-orange);
+   }
+</style>
