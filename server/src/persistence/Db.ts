@@ -7,7 +7,7 @@ export class Db {
 
    private readonly _level: level.LevelDB;
 
-   public constructor(public readonly name: string) {
+   public constructor(public readonly name: string = 'default') {
       let db = instances.get(name);
       if (!db) {
          db = level(`.level/${name}`);

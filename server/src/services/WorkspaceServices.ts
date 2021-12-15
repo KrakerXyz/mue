@@ -2,18 +2,18 @@ import { Config, Db, Cache } from '../persistence';
 
 export class WorkspaceServices {
 
-   private readonly _db: Db;
+   private static _db: Db;
 
-   public constructor(public readonly id: string) {
-      this._db = new Db(id);
+   public constructor() {
+      if (!WorkspaceServices._db) { WorkspaceServices._db = new Db(); }
    }
 
    public get config(): Config {
-      return new Config(this._db);
+      return new Config(WorkspaceServices._db);
    }
 
    public get cache(): Cache {
-      return new Cache(this._db);
+      return new Cache(WorkspaceServices._db);
    }
 
 }

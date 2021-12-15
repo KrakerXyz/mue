@@ -20,6 +20,7 @@
    import Collections from './widgets/Collections.vue';
    import Databases from './widgets/Databases.vue';
    import Query from './widgets/query/Query.vue';
+   import Connections from './widgets/Connections.vue';
    import { Widget, WidgetStyle } from '@core/models';
    import { WidgetManager } from './WidgetManager';
    import { ResizableOptions } from '../global/resizableDirective';
@@ -29,6 +30,7 @@
          Databases,
          Collections,
          Query,
+         Connections,
       },
       setup() {
          const manager = inject<WidgetManager>(WidgetManager.INJECT);

@@ -19,7 +19,7 @@ export class WebSocketManager {
 
         const connection: Connection = {
             socket: socketStream.socket,
-            services: new WorkspaceServices('fd429623-dc7c-4aa1-ad18-982f6fd5c428'),
+            services: new WorkspaceServices(),
             subscriptions: new Map()
         };
 

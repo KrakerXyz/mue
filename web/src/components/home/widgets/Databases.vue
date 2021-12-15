@@ -1,5 +1,5 @@
 <template>
-   <workspace-widget>
+   <v-workspace-widget>
       <template #header-icon>
          <i class="fal fa-database fa-fw fa-3x"></i>
       </template>
@@ -26,7 +26,7 @@
             </button>
          </div>
       </template>
-   </workspace-widget>
+   </v-workspace-widget>
 </template>
 
 <script lang="ts">
@@ -34,12 +34,8 @@
    import { DatabaseListData } from '@core/subscriptions';
    import { defineComponent, watch, ref, computed, onUnmounted, inject } from 'vue';
    import { WidgetManager } from '../WidgetManager';
-   import WorkspaceWidget from '../WorkspaceWidget.vue';
 
    export default defineComponent({
-      components: {
-         WorkspaceWidget,
-      },
       setup() {
          const ws = useWs();
 

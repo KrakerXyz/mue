@@ -17,7 +17,7 @@ export class WidgetManager {
       return this._widgets;
    }
 
-   public add(component: 'databases' | 'query' | 'collections', props: Record<string, any>) {
+   public add(component: 'databases' | 'query' | 'collections' | 'connections', props: Record<string, any>) {
       const newWidget: Widget = {
          id: v4(),
          component,

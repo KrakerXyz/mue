@@ -3,11 +3,9 @@
       <div class="card-header px-2" @mousedown="($event: MouseEvent) => startDrag($event)">
          <div class="row g-0">
             <div class="col-auto d-flex align-items-center">
-               <div>
-                  <slot name="header-icon"></slot>
-               </div>
+               <slot name="header-icon"></slot>
             </div>
-            <div class="col mx-2">
+            <div class="col mx-2 d-flex align-items-center">
                <slot name="header"></slot>
             </div>
             <div class="col-auto">

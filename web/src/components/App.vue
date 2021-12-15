@@ -7,7 +7,10 @@
                   <router-link class="nav-link" :to="{ name: 'home' }">Home</router-link>
                </li> -->
                <li class="nav-item">
-                  <button class="btn btn-link nav-link" @click="openDatabases()"><i class="fal fa-database fa-fw"></i> Databases</button>
+                  <button class="btn btn-link nav-link" @click="openWidget('connections')"><i class="fal fa-ethernet fa-fw me-1"></i>Connections</button>
+               </li>
+               <li v-if="hasConnections" class="nav-item">
+                  <button class="btn btn-link nav-link" @click="openWidget('databases')"><i class="fal fa-database fa-fw me-1"></i> Databases</button>
                </li>
             </ul>
 
@@ -32,8 +35,8 @@
 </template>
 
 <script lang="ts">
-   import { useWs } from '@/services';
-   import { defineComponent, provide } from 'vue';
+   import { useConnections, useWs } from '@/services';
+   import { computed, defineComponent, provide } from 'vue';
    import { WidgetManager } from './home/WidgetManager';
 
    export default defineComponent({
@@ -43,11 +46,15 @@
 
          const ws = useWs();
 
-         const openDatabases = () => {
-            manager.add('databases', {});
+         const connections = useConnections();
+
+         const hasConnections = computed(() => !!connections.value?.length);
+
+         const openWidget = (widget: 'connections' | 'databases') => {
+            manager.add(widget, {});
          };
 
-         return { wsState: ws.state, openDatabases };
+         return { wsState: ws.state, openWidget, hasConnections };
       },
    });
 </script>

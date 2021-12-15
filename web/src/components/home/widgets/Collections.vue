@@ -1,5 +1,5 @@
 <template>
-   <workspace-widget>
+   <v-workspace-widget>
       <template #header-icon>
          <i class="fal fa-layer-group fa-fw fa-3x"></i>
       </template>
@@ -23,18 +23,16 @@
             </button>
          </div>
       </template>
-   </workspace-widget>
+   </v-workspace-widget>
 </template>
 
 <script lang="ts">
    import { useSubscriptionRef, useWs } from '@/services';
    import { computed, defineComponent, inject, ref } from 'vue';
-   import WorkspaceWidget from '../WorkspaceWidget.vue';
    import { WidgetManager } from '../WidgetManager';
    import { Collection } from '@core/models';
 
    export default defineComponent({
-      components: { WorkspaceWidget },
       props: {
          connection: { type: String, required: true },
          database: { type: String, required: true },

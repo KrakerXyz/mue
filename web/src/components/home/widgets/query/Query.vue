@@ -1,5 +1,5 @@
 <template>
-   <workspace-widget>
+   <v-workspace-widget>
       <template #header-icon>
          <i class="fal fa-list fa-fw fa-3x"></i>
       </template>
@@ -101,14 +101,13 @@
             </div>
          </div>
       </template>
-   </workspace-widget>
+   </v-workspace-widget>
 </template>
 
 <script lang="ts">
    import { useWs } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
    import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
-   import WorkspaceWidget from '../../WorkspaceWidget.vue';
    import JSON5 from 'json5';
    import { defaultResultContext, ObjectValue, ObjectValueRoot, ResultContext } from './ResultObjects';
    import ObjectValueVue from './ObjectValue.vue';
@@ -118,7 +117,6 @@
 
    export default defineComponent({
       components: {
-         WorkspaceWidget,
          'object-value': ObjectValueVue,
          // eslint-disable-next-line vue/no-unused-components
          'array-value': ArrayValueVue,
