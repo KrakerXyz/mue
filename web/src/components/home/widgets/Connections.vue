@@ -15,6 +15,9 @@
                      <span class="badge bg-primary">{{ con.name }}</span>
                   </div>
                   <div class="col text-muted small font-monospace text-truncate d-flex align-items-center">{{ con.connectionString }}</div>
+                  <div class="col-auto">
+                     <button class="btn p-0 text-danger" @click="confirmDelete = con"><i class="fal fa-trash-alt"></i></button>
+                  </div>
                </div>
             </div>
             <div class="list-group-item">
@@ -38,6 +41,10 @@
                </form>
             </div>
          </div>
+         <v-confirmation-modal v-if="confirmDelete" @cancel="confirmDelete = undefined" @confirm="deleteConnection()">
+            <h3>Confirm Delete</h3>
+            Are you sure you want to delete <span class="badge bg-primary me-2">Prod1</span>?
+         </v-confirmation-modal>
       </template>
    </v-workspace-widget>
 </template>
@@ -76,7 +83,20 @@
             isSaving.value = false;
          };
 
-         return { connections, newConnection, isNewValid, addConnection, isSaving };
+         const confirmDelete = ref<Connection>();
+         const deleteConnection = async () => {
+            if (!confirmDelete.value || !connections.value) {
+               return;
+            }
+            const newConnections = connections.value.filter((c) => c !== confirmDelete.value);
+            await ws.command({
+               name: 'command.config.connections.update',
+               connections: newConnections,
+            });
+            confirmDelete.value = undefined;
+         };
+
+         return { connections, newConnection, isNewValid, addConnection, isSaving, confirmDelete, deleteConnection };
       },
    });
 </script>

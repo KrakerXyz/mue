@@ -59,6 +59,8 @@ export class WebSocketManager {
                 const handler = commandHandlers[msg.data.name];
                 await handler(msg.data, connection.services);
 
+                connection.services.commandEvents.emit(msg.data.name, msg.data);
+
                 const serverMessage: CommandServerMessage = {
                     id: randomUUID(),
                     replyTo: msg.id,

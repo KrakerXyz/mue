@@ -91,6 +91,9 @@ export class Field {
    public constructor(public readonly key: string, v: any, public readonly parent: ObjectValue) {
       this.path = parent.parent?.path ?? '';
       this.path += (this.path ? '.' : '') + key;
+      if (Array.isArray(v)) {
+         this.path += '[]';
+      }
       this.value = createValue(v, this);
    }
 

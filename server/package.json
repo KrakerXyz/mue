@@ -26,6 +26,7 @@
   "dependencies": {
     "ajv": "^6.12.6",
     "dotenv": "^10.0.0",
+    "eventemitter3": "^4.0.7",
     "fastify": "^3.19.1",
     "fastify-static": "^4.2.3",
     "fastify-websocket": "^4",
