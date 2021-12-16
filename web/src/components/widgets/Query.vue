@@ -91,7 +91,7 @@
                   </button>
                </div>
             </div>
-            <div class="list-group flex-grow-1 overflow-auto">
+            <div class="list-group flex-grow-1 overflow-auto font-monospace">
                <div class="list-group-item" v-for="(r, index) of results" :key="index">
                   <v-object-value :value="r" :result-index="index" :contextManager="contextManager" basePath=""></v-object-value>
                </div>

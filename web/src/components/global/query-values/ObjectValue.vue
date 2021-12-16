@@ -9,22 +9,24 @@
             <span class="text-muted small">{{ fields.length }} fields</span>
          </div>
       </div>
-      <template v-if="isExpanded">
-         <div class="row" v-for="field of fields" :key="field.name">
-            <div class="col-4 col-md-3 col-lg-2 text-truncate" :title="field.path">
-               <span class="text-muted small ps-3" role="button"><i class="fal fa-eye-slash"></i></span> {{ field.name }}
-            </div>
-            <div class="col text-truncate">
-               <component
-                  :is="`v-${field.type}-value`"
-                  :contextManager="contextManager"
-                  :resultIndex="resultIndex"
-                  :value="field.value"
-                  :basePath="field.path"
-               ></component>
+      <div class="list-group list-group-flush" v-if="isExpanded">
+         <div class="list-group-item" v-for="field of fields" :key="field.name">
+            <div class="row">
+               <div class="col-4 col-md-3 col-lg-2 text-truncate" :title="field.path">
+                  <span class="text-muted small" role="button"><i class="fal fa-eye-slash"></i></span> {{ field.name }}
+               </div>
+               <div class="col text-truncate">
+                  <component
+                     :is="`v-${field.type}-value`"
+                     :contextManager="contextManager"
+                     :resultIndex="resultIndex"
+                     :value="field.value"
+                     :basePath="field.path"
+                  ></component>
+               </div>
             </div>
          </div>
-      </template>
+      </div>
    </div>
 </template>
 
@@ -43,7 +45,12 @@
          const fields = computed(() => {
             const vms: FieldVm[] = [];
 
-            for (const name of Object.getOwnPropertyNames(props.value)) {
+            const fieldNames = Object.getOwnPropertyNames(props.value);
+            if (props.contextManager.context.sortFields) {
+               fieldNames.sort((a, b) => a.localeCompare(b));
+            }
+
+            for (const name of fieldNames) {
                const value = props.value[name];
 
                const isArray = Array.isArray(value);
