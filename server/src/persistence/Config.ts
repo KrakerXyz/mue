@@ -1,13 +1,15 @@
 import { Db, DbNamespace } from './Db';
 import { Connection } from '@core/models/Connection';
-import { WorkspaceState } from '@core/models';
+import { Workspace, WorkspaceState } from '@core/models';
 
 export class Config {
 
    private readonly _ns: DbNamespace;
+   private readonly _nsWorkspaces: DbNamespace;
 
    public constructor(readonly db: Db) {
       this._ns = db.createNamespace('config');
+      this._nsWorkspaces = this._ns.createNamespace('workspaces');
    }
 
    public readonly connections = {
@@ -19,13 +21,24 @@ export class Config {
       }
    };
 
-   public readonly workspaceState = {
-      get: () => {
-         return this._ns.get('workspace-state') as Promise<WorkspaceState | null>;
+   public readonly workspaces = {
+
+      list: () => {
+         return this._nsWorkspaces.get('') as Promise<Workspace[] | null>;
       },
-      update: (workspaceState: WorkspaceState) => {
-         return this._ns.put('workspace-state', workspaceState);
+      update: (workspaces: Workspace[]) => {
+         return this._nsWorkspaces.put('', workspaces);
+      },
+
+      state: {
+         get: (id: string) => {
+            return this._nsWorkspaces.createNamespace('state').get(id) as Promise<WorkspaceState | null>;
+         },
+         update: (id: string, workspaceState: WorkspaceState) => {
+            return this._nsWorkspaces.createNamespace('state').put(id, workspaceState);
+         }
       }
+
    };
 
 }

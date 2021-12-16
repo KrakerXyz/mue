@@ -1,23 +1,26 @@
 <template>
    <div>
       <div class="row g-2">
-         <div class="col-auto text-success" role="button" @click="contextManager.togglePathExpanded(basePath, resultIndex)">
+         <div class="col-auto text-success d-flex align-items-center" role="button" @click="contextManager.togglePathExpanded(basePath, resultIndex)">
             <i class="fas fa-brackets-curly fa-fw"></i>
          </div>
-         <div class="col text-truncate" v-if="!isExpanded" v-html="contextManager.getSummaryHtml(value, basePath)"></div>
+         <div class="col text-truncate" v-if="!isExpanded">
+            <span class="align-text-bottom" v-html="contextManager.getSummaryHtml(value, basePath)"></span>
+         </div>
          <div class="col-auto">
-            <span class="text-muted small">{{ fields.length }} fields</span>
+            <span class="text-muted small">{{ fields.length }} field{{ !fields.length || fields.length > 1 ? 's' : '' }}</span>
          </div>
       </div>
       <div class="list-group list-group-flush" v-if="isExpanded">
          <div class="list-group-item" v-for="field of fields" :key="field.name">
             <div class="row">
                <div class="col-4 col-md-3 col-lg-2 text-truncate" :title="field.path">
-                  <span class="text-muted small" role="button"><i class="fal fa-eye-slash"></i></span> {{ field.name }}
+                  <span class="text-muted small" role="button" @click="contextManager.toggleHidePath(field.path)"><i class="fal fa-eye-slash"></i></span>
+                  {{ field.name }}
                </div>
                <div class="col text-truncate">
                   <component
-                     :is="`v-${field.type}-value`"
+                     :is="field.type"
                      :contextManager="contextManager"
                      :resultIndex="resultIndex"
                      :value="field.value"
@@ -33,6 +36,7 @@
 <script lang="ts">
    import { computed, defineComponent } from 'vue';
    import { ResultContextManager } from '@/components/widgets/Query.vue';
+   import { getValueType, ValueType } from '.';
 
    export default defineComponent({
       props: {
@@ -53,34 +57,18 @@
             for (const name of fieldNames) {
                const value = props.value[name];
 
-               const isArray = Array.isArray(value);
-               let type = typeof value;
+               const fieldPath = `${props.basePath}${props.basePath ? '.' : ''}${name}`;
 
-               if (props.contextManager.context.hideEmpty) {
-                  if (!value) {
-                     continue;
-                  }
-
-                  if (isArray && value.length === 0) {
-                     continue;
-                  }
-               }
-
-               if (type === 'symbol' || type === 'function' || type === 'undefined') {
-                  type = 'string';
-               } else if (type === 'bigint') {
-                  type = 'number';
+               if (!props.contextManager.isVisible(fieldPath, value)) {
+                  continue;
                }
 
                const f: FieldVm = {
                   name,
-                  type: isArray ? 'array' : type,
+                  type: getValueType(value),
                   value,
-                  path: `${props.basePath}.${name}`,
+                  path: fieldPath,
                };
-               if (f.path.startsWith('.')) {
-                  f.path = f.path.substring(1);
-               }
 
                vms.push(f);
             }
@@ -88,7 +76,7 @@
             return vms;
          });
 
-         const isExpanded = props.contextManager.useIsExpanded(props.basePath, props.resultIndex);
+         const isExpanded = computed(() => props.contextManager.isExpanded(props.basePath, props.resultIndex));
 
          return { fields, isExpanded };
       },
@@ -96,7 +84,7 @@
 
    interface FieldVm {
       name: string;
-      type: 'string' | 'object' | 'array' | 'number' | 'boolean';
+      type: ValueType;
       value: any;
       path: string;
    }

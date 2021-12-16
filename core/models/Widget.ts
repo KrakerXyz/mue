@@ -8,7 +8,7 @@ export interface WidgetStyle {
    height?: string;
 }
 
-export type WidgetName = 'connections' | 'databases' | 'collections' | 'query';
+export type WidgetName = 'connections' | 'databases' | 'collections' | 'query' | 'workspaces';
 
 export interface Widget<TName extends WidgetName = any> {
    id: string;
@@ -40,8 +40,6 @@ export type WidgetProps<TName extends WidgetName> =
       query?: string;
       resultContext?: QueryWidgetResultContext;
    }
+   : TName extends 'workspaces'
+   ? undefined
    : never;
-
-export interface WorkspaceState {
-   widgets: Widget[];
-}

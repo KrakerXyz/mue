@@ -12,7 +12,7 @@
             <div class="list-group-item list-group-item-action" v-for="con of connections" :key="con.name">
                <div class="row g-2">
                   <div class="col-auto">
-                     <span class="badge bg-primary">{{ con.name }}</span>
+                     <v-connection-badge :name="con.name"></v-connection-badge>
                   </div>
                   <div class="col text-muted small font-monospace text-truncate d-flex align-items-center">{{ con.connectionString }}</div>
                   <div class="col-auto">
@@ -43,7 +43,9 @@
          </div>
          <v-confirmation-modal v-if="confirmDelete" @cancel="confirmDelete = undefined" @confirm="deleteConnection()">
             <h3>Confirm Delete</h3>
-            Are you sure you want to delete <span class="badge bg-primary me-2">Prod1</span>?
+            Are you sure you want to delete
+            <v-connection-badge :name="confirmDelete.name" class="me-2"></v-connection-badge>
+            ?
          </v-confirmation-modal>
       </template>
    </v-widget-template>
@@ -69,8 +71,8 @@
          const isNewValid = computed(
             () =>
                newConnection.name &&
-               newConnection.connectionString.startsWith('mongodb+srv://') &&
-               newConnection.connectionString.replaceAll('mongodb+srv://', '')
+               (newConnection.connectionString.startsWith('mongodb+srv://') || newConnection.connectionString.startsWith('mongodb://')) &&
+               newConnection.connectionString.replaceAll('mongodb+srv://', '').replaceAll('mongodb://', '')
          );
 
          const isSaving = ref(false);
@@ -82,7 +84,7 @@
                connections: copy,
             });
             newConnection.name = '';
-            newConnection.connectionString = 'mongodb+srv://';
+            newConnection.connectionString = 'mongodb://';
             isSaving.value = false;
          };
 

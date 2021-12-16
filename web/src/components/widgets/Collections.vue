@@ -9,7 +9,7 @@
                <h4 class="mb-0">Collections: {{ database }}</h4>
             </div>
             <div class="col-auto">
-               <span class="badge bg-primary">{{ connection }}</span>
+               <v-connection-badge :name="connection"></v-connection-badge>
             </div>
             <div class="col">
                <input class="form-control" v-model="nameFilter" placeholder="Filter" />

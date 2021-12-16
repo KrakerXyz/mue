@@ -1,11 +1,6 @@
 <template>
-   <span
-      class="text-orange"
-      :class="{ 'text-truncate': !isExpanded, 'text-wrap': isExpanded }"
-      role="button"
-      @click="contextManager.togglePathExpanded(basePath, resultIndex)"
-   >
-      '{{ value }}'
+   <span>
+      {{ str }}
    </span>
 </template>
 
@@ -15,14 +10,14 @@
 
    export default defineComponent({
       props: {
-         value: { type: String, required: true },
+         value: { type: String, required: false },
          resultIndex: { type: Number, required: true },
          basePath: { type: String, required: true },
          contextManager: { type: Object as () => ResultContextManager, required: true },
       },
       setup(props) {
-         const isExpanded = computed(() => props.contextManager.isExpanded(props.basePath, props.resultIndex));
-         return { isExpanded };
+         const str = computed(() => (props.value === undefined ? 'undefined' : 'null'));
+         return { str };
       },
    });
 </script>

@@ -10,5 +10,6 @@ export interface QueryWidgetResultContext {
    };
    favorite: boolean;
    locked: boolean;
+   pathFilter: string | null | undefined;
    results: { created: number, data: Record<string, any>[] } | null;
 }

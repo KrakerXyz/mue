@@ -20,7 +20,7 @@
             </div>
             <div class="col"></div>
             <div class="col-auto">
-               <span class="badge bg-primary">{{ connection }}</span>
+               <v-connection-badge :name="connection"></v-connection-badge>
             </div>
          </div>
       </template>
@@ -42,7 +42,7 @@
       </template>
       <template #body v-if="results">
          <div class="h-100 d-flex flex-column">
-            <div class="row m-2">
+            <div class="row p-2 border-bottom bg-light d-flex align-items-center">
                <div class="col-auto">
                   <div class="form-check">
                      <input class="form-check-input" type="checkbox" id="sort-fields" v-model="context.sortFields" />
@@ -76,7 +76,10 @@
                      </div>
                   </div>
                </div>
-               <div class="col d-flex justify-content-end">
+               <div class="col">
+                  <input class="form-control" placeholder="Path Filter" v-model="context.pathFilter" />
+               </div>
+               <div class="col-auto d-flex justify-content-end">
                   <button v-if="!context.locked" class="btn p-0 me-2" @click="context.locked = true">
                      <i class="fal fa-lock-open"></i>
                   </button>
@@ -182,6 +185,11 @@
                return;
             }
 
+            if (context.locked) {
+               console.warn('Attempted to rerun exec() on locked query');
+               return;
+            }
+
             results.value = undefined;
             isRunning.value = true;
 
@@ -250,6 +258,7 @@
       favorite: false,
       results: null,
       locked: false,
+      pathFilter: undefined,
    });
 
    /** Passed through the result rendering vue to provide access to and to mutate a result context */
@@ -273,16 +282,45 @@
          }
       }
 
-      public useIsExpanded(path: string, resultIndex: number) {
-         return computed(() => {
-            if (this.context.expandAll) {
-               return true;
+      public isExpanded(path: string, resultIndex: number) {
+         if (this.context.expandAll) {
+            return true;
+         }
+         if (this.context.expandedPaths.global.includes(path)) {
+            return true;
+         }
+         return !!this.context.expandedPaths.indexed[resultIndex]?.includes(path);
+      }
+
+      public toggleHidePath(path: string) {
+         const index = this.context.hidePaths.indexOf(path);
+         if (index === -1) {
+            this.context.hidePaths.push(path);
+         } else {
+            this.context.hidePaths.splice(index, 1);
+         }
+      }
+
+      public isVisible(path: string, value: any) {
+         if (this.context.hidePaths.includes(path)) {
+            return false;
+         }
+
+         if (this.context.pathFilter && !path.toLowerCase().includes(this.context.pathFilter.toLowerCase())) {
+            return false;
+         }
+
+         if (this.context.hideEmpty) {
+            if (!value) {
+               return false;
             }
-            if (this.context.expandedPaths.global.includes(path)) {
-               return true;
+
+            if (Array.isArray(value) && value.length === 0) {
+               return false;
             }
-            return !!this.context.expandedPaths.indexed[resultIndex]?.includes(path);
-         });
+         }
+
+         return true;
       }
    }
 </script>

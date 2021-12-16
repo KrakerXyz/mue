@@ -20,7 +20,7 @@
                <div class="row">
                   <div class="col text-truncate font-monospace">{{ db.databaseName }}</div>
                   <div class="col-auto">
-                     <span class="badge bg-primary">{{ db.connectionName }}</span>
+                     <v-connection-badge :name="db.connectionName"></v-connection-badge>
                   </div>
                </div>
             </button>

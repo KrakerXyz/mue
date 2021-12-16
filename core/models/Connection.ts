@@ -1,5 +1,5 @@
 
-export type ConnectionString = `mongodb+srv://${string}`;
+export type ConnectionString = `mongodb+srv://${string}` | `mongodb://${string}`;
 
 export interface Connection {
    name: string;

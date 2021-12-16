@@ -35,6 +35,11 @@ export class DbNamespace<T = any> {
       if (name.includes('|')) { throw new Error('Namespace cannot include "|"'); }
    }
 
+   public createNamespace<T = any>(name: string): DbNamespace {
+      return new DbNamespace<T>(name, this);
+   }
+
+
    public get fullName(): string {
       if (this._parent instanceof Db) { return this.name; }
       return `${this._parent.fullName}|${this.name}`;

@@ -1,3 +1,4 @@
+import { WorkspaceStateUpdateCommand } from '@core/commands';
 import { Widget, WidgetName, WidgetProps, WorkspaceState } from '@core/models';
 import { v4 } from 'uuid';
 import { reactive } from 'vue';
@@ -6,8 +7,10 @@ import { useWs } from '.';
 export class WidgetManager {
 
    private readonly _ws = useWs();
+   private readonly _widgets = reactive<Widget[]>([]);
 
-   private _widgets = reactive<Widget[]>([]);
+   public constructor(public readonly workspaceId: string) { }
+
    public get widgets() { return this._widgets; }
 
    public add<TName extends WidgetName>(name: TName, props: WidgetProps<TName>) {
@@ -102,12 +105,14 @@ export class WidgetManager {
       }
       this._updateStateThrottle = setTimeout(() => {
          this._updateStateThrottle = null;
-         this._ws.command({
-            name: 'command.config.workspace.state.update',
+         const cmd: WorkspaceStateUpdateCommand = {
+            name: 'command.config.workspaces.state.update',
+            workspaceId: this.workspaceId,
             state: {
                widgets: this._widgets,
             },
-         });
+         };
+         this._ws.command(cmd);
       }, 700);
    }
 
