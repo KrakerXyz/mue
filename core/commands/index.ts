@@ -10,7 +10,7 @@ export interface CommandClientMessage<TData extends Command = Command> {
    data: TData;
 }
 
-export type CommandServerMessage<TCommand extends Command = Command> = {
+export type CommandServerMessage<_ extends Command = Command> = {
    /** Unique id for this message */
    id: string;
    /** id from the subscription client message */

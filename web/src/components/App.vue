@@ -22,27 +22,22 @@
       </div>
 
       <div class="flex-grow-1 position-relative overflow-hidden">
-         <Suspense>
-            <template #default>
-               <router-view></router-view>
-            </template>
-            <template #fallback>
-               <span>Loading...</span>
-            </template>
-         </Suspense>
+         <v-workspace :widgetManager="manager"></v-workspace>
       </div>
    </div>
 </template>
 
 <script lang="ts">
-   import { useConnections, useWs } from '@/services';
-   import { computed, defineComponent, provide } from 'vue';
-   import { WidgetManager } from './home/WidgetManager';
+   import { toPromise, useConnections, useWs, WidgetManager } from '@/services';
+   import { computed, defineComponent, watch } from 'vue';
+   import Workspace from './Workspace.vue';
 
    export default defineComponent({
+      components: {
+         'v-workspace': Workspace,
+      },
       setup() {
          const manager = new WidgetManager();
-         provide(WidgetManager.INJECT, manager);
 
          const ws = useWs();
 
@@ -50,11 +45,33 @@
 
          const hasConnections = computed(() => !!connections.value?.length);
 
+         const consWatchStop = watch(
+            connections,
+            (cons) => {
+               if (!cons) {
+                  return;
+               }
+               setTimeout(consWatchStop);
+               if (!cons.length) {
+                  manager.add('connections', undefined);
+               } else {
+                  const workspace$ = ws.subscribe({
+                     name: 'subscription.config.workspace.state',
+                  });
+
+                  toPromise(workspace$).then((state) => {
+                     manager.loadState(state);
+                  });
+               }
+            },
+            { immediate: true }
+         );
+
          const openWidget = (widget: 'connections' | 'databases') => {
-            manager.add(widget, {});
+            manager.add(widget, undefined);
          };
 
-         return { wsState: ws.state, openWidget, hasConnections };
+         return { wsState: ws.state, openWidget, manager, hasConnections };
       },
    });
 </script>

@@ -1,6 +1,6 @@
 import { AbstractCursor } from 'mongodb';
 import { CommandClientMessage, CommandServerMessage } from './commands';
-import { Subscription, SubscriptionClientMessage, SubscriptionServerMessage } from './subscriptions';
+import { SubscriptionClientMessage, SubscriptionServerMessage } from './subscriptions';
 
 export function isSubscriptionClientMessage(msg: SubscriptionClientMessage | CommandClientMessage): msg is SubscriptionClientMessage {
    return msg.data.name.startsWith('subscription');

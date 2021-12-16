@@ -1,5 +1,5 @@
 <template>
-   <v-workspace-widget>
+   <v-widget-template :widget="widget" :widgetManager="widgetManager">
       <template #header-icon>
          <i class="fal fa-list fa-fw fa-3x"></i>
       </template>
@@ -10,7 +10,7 @@
                   <span class="fw-bold">
                      {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
                   </span>
-                  <span v-if="results.length" class="ms-2 text-muted">{{ results.length }} result{{ results.length > 1 ? 's' : '' }}</span>
+                  <span v-if="results?.length" class="ms-2 text-muted">{{ results.length }} result{{ results.length > 1 ? 's' : '' }}</span>
                </div>
                <div v-if="parsed">
                   <span class="text-muted small">{{ parsed.command }}(</span>
@@ -92,48 +92,38 @@
                </div>
             </div>
             <div class="list-group flex-grow-1 overflow-auto">
-               <div class="list-group-item" v-for="r of results" :key="r.id">
+               <!-- <div class="list-group-item" v-for="r of results" :key="r.id">
                   <object-value :value="r" :context="context"></object-value>
-               </div>
+               </div> -->
             </div>
             <div v-if="context.results" class="row p-2 bg-light small text-muted">
                <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
             </div>
          </div>
       </template>
-   </v-workspace-widget>
+   </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useWs } from '@/services';
+   import { useWs, WidgetManager } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
    import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
-   import { defaultResultContext, ObjectValue, ObjectValueRoot, ResultContext } from './ResultObjects';
-   import ObjectValueVue from './ObjectValue.vue';
-   import ArrayValueVue from './ArrayValue.vue';
-   import { deepClone } from '@core/util';
-   import FieldVue from './Field.vue';
+   import { deepClone, deepFreeze } from '@core/util';
+   import { QueryWidgetResultContext, Widget } from '@core/models';
 
    export default defineComponent({
-      components: {
-         'object-value': ObjectValueVue,
-         // eslint-disable-next-line vue/no-unused-components
-         'array-value': ArrayValueVue,
-         // eslint-disable-next-line vue/no-unused-components
-         field: FieldVue,
-      },
       props: {
          connection: { type: String, required: true },
          database: { type: String, required: true },
          collection: { type: String, required: true },
          query: { type: String },
-         resultContext: { type: Object as () => ResultContext },
+         resultContext: { type: Object as () => QueryWidgetResultContext },
+
+         widget: { type: Object as () => Widget, required: true },
+         widgetManager: { type: Object as () => WidgetManager, required: true },
       },
-      emits: {
-         'update-props': (value: Record<string, any>) => !!value,
-      },
-      setup(props, { emit }) {
+      setup(props) {
          const ws = useWs();
 
          const queryString = ref<string>(props.query ?? `db.getCollection('${props.collection}').find({})`);
@@ -172,16 +162,17 @@
             if (queryString.value === props.query) {
                return;
             }
-            emit('update-props', { query: queryString.value });
+            props.widgetManager.updateProps(props.widget, { query: queryString.value });
          });
 
          const invalid = computed(() => !parsed.value);
 
-         let results = ref<ObjectValue[]>(reactive([]));
          // eslint-disable-next-line no-undef
          let sub: ZenObservable.Subscription | null = null;
 
          const isRunning = ref(false);
+         const results = ref<Record<string, any>[]>();
+
          const exec = () => {
             if (sub) {
                sub.unsubscribe();
@@ -190,31 +181,28 @@
             if (!parsed.value) {
                return;
             }
-            results.value = reactive([]);
-            const rawResults: Record<string, any>[] = [];
-            const newResults: ObjectValue[] = [];
 
+            results.value = undefined;
             isRunning.value = true;
 
             const now = Date.now();
             const obs = ws.subscribe(parsed.value);
+            const rawResults: Record<string, any>[] = [];
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
                   rawResults.push(r);
-                  const v = new ObjectValueRoot(r, newResults.length, context, props.connection, props.database, props.collection);
-                  newResults.push(v);
                }
-               results.value = newResults;
                if (d.complete) {
-                  console.debug(`Finished query in ${Date.now() - now}ms with ${newResults.length} records`);
+                  console.debug(`Finished query in ${Date.now() - now}ms with ${rawResults.length} records`);
                   context.results = { created: Date.now(), data: rawResults };
+                  results.value = rawResults;
                   isRunning.value = false;
                }
             });
          };
 
-         const context: ResultContext = reactive({
+         const context: QueryWidgetResultContext = reactive({
             ...defaultResultContext,
             ...{ expandedPaths: deepClone(defaultResultContext.expandedPaths) },
             ...(props.resultContext ?? {}),
@@ -231,7 +219,7 @@
          watch(
             context,
             (c) => {
-               emit('update-props', { resultContext: c });
+               props.widgetManager.updateProps<'query'>(props.widget, { resultContext: c });
             },
             { deep: true }
          );
@@ -243,12 +231,22 @@
          }
 
          if (context.results) {
-            results.value = context.results.data.map((r, index) => new ObjectValueRoot(r, index, context, props.connection, props.database, props.collection));
             console.debug('Set results from context results');
          }
 
-         return { queryString, invalid, exec, results, isRunning, context, parsed, showPath };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results };
       },
+   });
+
+   const defaultResultContext: QueryWidgetResultContext = deepFreeze({
+      sortFields: false,
+      hideEmpty: false,
+      expandAll: false,
+      hidePaths: [],
+      expandedPaths: { global: [], indexed: {} },
+      favorite: false,
+      results: null,
+      locked: false,
    });
 </script>
 

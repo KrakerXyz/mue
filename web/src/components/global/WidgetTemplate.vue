@@ -6,13 +6,15 @@
                <slot name="header-icon"></slot>
             </div>
             <div class="col mx-2 d-flex align-items-center">
-               <slot name="header"></slot>
+               <div class="w-100">
+                  <slot name="header"></slot>
+               </div>
             </div>
             <div class="col-auto">
-               <button class="btn p-0" @click="maximize()" title="Maximize Panel">
+               <button class="btn p-0" @click="widgetManager.toggleMaximized(widget)" title="Maximize Panel">
                   <i class="fal fa-window-maximize fa-fw fa-lg"></i>
                </button>
-               <button class="btn p-0" @click="close()" title="Close Panel">
+               <button class="btn p-0" @click="widgetManager.remove(widget)" title="Close Panel">
                   <i class="fal fa-times fa-fw fa-lg"></i>
                </button>
             </div>
@@ -26,27 +28,17 @@
 </template>
 
 <script lang="ts">
-   import { defineComponent, inject, onUnmounted } from 'vue';
-   import { WidgetManager } from './WidgetManager';
+   import { defineComponent, onUnmounted } from 'vue';
+   import { WidgetManager } from '@/services/WidgetManager';
    import { Widget } from '@core/models';
 
    export default defineComponent({
-      setup(props, { attrs }) {
-         const widget: Widget = attrs.widget as any;
-         if (!widget) {
-            console.error('attr.widget not found');
-         }
-
-         const widgetManager = inject<WidgetManager>(WidgetManager.INJECT);
-
-         const close = () => {
-            widgetManager?.remove(widget);
-         };
-
-         const maximize = () => {
-            widgetManager?.toggleMaximized(widget);
-         };
-
+      props: {
+         widget: { type: Object as () => Widget, required: true },
+         widgetManager: { type: Object as () => WidgetManager, required: true },
+      },
+      // eslint-disable-next-line vue/no-setup-props-destructure
+      setup({ widget, widgetManager }) {
          let mouseMoveOrigin: { x: number; y: number; offsetX: number; offsetY: number } | null = null;
          const mouseMove = (evt: MouseEvent) => {
             if (!mouseMoveOrigin) {
@@ -54,7 +46,7 @@
             }
             const diffX = evt.pageX - mouseMoveOrigin.x;
             const diffY = evt.pageY - mouseMoveOrigin.y;
-            widgetManager?.setPosition(widget, { left: diffX + mouseMoveOrigin.offsetX, top: diffY + mouseMoveOrigin.offsetY });
+            widgetManager.setPosition(widget, { left: diffX + mouseMoveOrigin.offsetX, top: diffY + mouseMoveOrigin.offsetY });
          };
 
          const dragStop = () => {
@@ -64,7 +56,7 @@
          };
 
          const startDrag = (evt: MouseEvent) => {
-            if (widget.maximized) {
+            if (widget.workspace.maximized) {
                return;
             }
             const card = (evt.target as HTMLElement).closest('.card') as HTMLDivElement;
@@ -80,7 +72,7 @@
 
          onUnmounted(() => dragStop());
 
-         return { close, maximize, startDrag };
+         return { startDrag };
       },
    });
 </script>

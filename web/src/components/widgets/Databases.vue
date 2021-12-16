@@ -1,15 +1,15 @@
 <template>
-   <v-workspace-widget>
+   <v-widget-template :widget="widget" :widgetManager="widgetManager">
       <template #header-icon>
          <i class="fal fa-database fa-fw fa-3x"></i>
       </template>
       <template #header>
          <div class="row g-2">
             <div class="col">
-               <div class="form-floating">
-                  <input id="name-filter" class="form-control" placeholder="*" v-model="nameFilter" />
-                  <label for="name-filter">Databases</label>
-               </div>
+               <h4 class="mb-0">Databases</h4>
+            </div>
+            <div class="col">
+               <input class="form-control" v-model="nameFilter" placeholder="Filter" />
             </div>
          </div>
       </template>
@@ -26,17 +26,21 @@
             </button>
          </div>
       </template>
-   </v-workspace-widget>
+   </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { observableJoin, useSubscriptionRef, useWs } from '@/services';
+   import { observableJoin, useSubscriptionRef, useWs, WidgetManager } from '@/services';
    import { DatabaseListData } from '@core/subscriptions';
-   import { defineComponent, watch, ref, computed, onUnmounted, inject } from 'vue';
-   import { WidgetManager } from '../WidgetManager';
+   import { defineComponent, watch, ref, computed, onUnmounted } from 'vue';
+   import { Widget } from '@core/models';
 
    export default defineComponent({
-      setup() {
+      props: {
+         widget: { type: Object as () => Widget, required: true },
+         widgetManager: { type: Object as () => WidgetManager, required: true },
+      },
+      setup(props) {
          const ws = useWs();
 
          const connections = useSubscriptionRef(
@@ -96,9 +100,8 @@
                .sort((a, b) => a.databaseName.localeCompare(b.databaseName));
          });
 
-         const widgetManager = inject<WidgetManager>(WidgetManager.INJECT);
          const dbSelected = (db: SelectedDatabase) => {
-            widgetManager?.add('collections', {
+            props.widgetManager.add('collections', {
                connection: db.connectionName,
                database: db.databaseName,
             } as any);

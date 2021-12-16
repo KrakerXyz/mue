@@ -1,18 +1,18 @@
 <template>
-   <v-workspace-widget>
+   <v-widget-template :widget="widget" :widgetManager="widgetManager">
       <template #header-icon>
          <i class="fal fa-layer-group fa-fw fa-3x"></i>
       </template>
       <template #header>
          <div class="row g-2">
-            <div class="col">
-               <div class="form-floating">
-                  <input id="name-filter" class="form-control" placeholder="*" v-model="nameFilter" />
-                  <label for="name-filter">{{ database }}</label>
-               </div>
+            <div class="col-auto">
+               <h4 class="mb-0">Collections: {{ database }}</h4>
             </div>
             <div class="col-auto">
                <span class="badge bg-primary">{{ connection }}</span>
+            </div>
+            <div class="col">
+               <input class="form-control" v-model="nameFilter" placeholder="Filter" />
             </div>
          </div>
       </template>
@@ -23,22 +23,22 @@
             </button>
          </div>
       </template>
-   </v-workspace-widget>
+   </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useSubscriptionRef, useWs } from '@/services';
-   import { computed, defineComponent, inject, ref } from 'vue';
-   import { WidgetManager } from '../WidgetManager';
-   import { Collection } from '@core/models';
+   import { useSubscriptionRef, useWs, WidgetManager } from '@/services';
+   import { computed, defineComponent, ref } from 'vue';
+   import { Collection, Widget } from '@core/models';
 
    export default defineComponent({
       props: {
          connection: { type: String, required: true },
          database: { type: String, required: true },
+         widget: { type: Object as () => Widget, required: true },
+         widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const widgetManager = inject<WidgetManager>(WidgetManager.INJECT);
          const ws = useWs();
          const cols = useSubscriptionRef(
             ws
@@ -51,7 +51,7 @@
          );
 
          const openQuery = (c: Collection) => {
-            widgetManager?.add('query', {
+            props.widgetManager.add('query', {
                connection: props.connection,
                database: props.database,
                collection: c.name,

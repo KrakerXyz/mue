@@ -1,5 +1,5 @@
 <template>
-   <v-workspace-widget>
+   <v-widget-template :widget="widget" :widgetManager="widgetManager">
       <template #header-icon>
          <i class="fal fa-ethernet fa-fw fa-3x"></i>
       </template>
@@ -46,16 +46,19 @@
             Are you sure you want to delete <span class="badge bg-primary me-2">Prod1</span>?
          </v-confirmation-modal>
       </template>
-   </v-workspace-widget>
+   </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useConnections, useWs } from '@/services';
-   import { Connection } from '@core/models';
+   import { useConnections, useWs, WidgetManager } from '@/services';
+   import { Connection, Widget } from '@core/models';
    import { computed, defineComponent, reactive, ref } from 'vue';
 
    export default defineComponent({
-      props: {},
+      props: {
+         widget: { type: Object as () => Widget, required: true },
+         widgetManager: { type: Object as () => WidgetManager, required: true },
+      },
       setup() {
          const ws = useWs();
 

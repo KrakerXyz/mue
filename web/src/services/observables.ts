@@ -12,6 +12,16 @@ export function useSubscriptionRef<T>(obs: Observable<T>): Ref<T | undefined> {
    return r;
 }
 
+export function toPromise<T>(obs: Observable<T>): Promise<T> {
+   return new Promise<T>(resolve => {
+      const sub = obs.subscribe(d => {
+         if (d === undefined) { return; }
+         resolve(d);
+         setTimeout(() => sub.unsubscribe());
+      });
+   });
+}
+
 export function observableJoin<T>(observables: Observable<T>[]): Observable<T> {
 
    return new Observable<T>(sub => {

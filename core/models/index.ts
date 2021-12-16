@@ -1,3 +1,4 @@
 export * from './Collection';
 export * from './Connection';
-export * from './WorkspaceState';
+export * from './Widget';
+export * from './QueryWidgetResultContext';
