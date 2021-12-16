@@ -92,9 +92,9 @@
                </div>
             </div>
             <div class="list-group flex-grow-1 overflow-auto">
-               <!-- <div class="list-group-item" v-for="r of results" :key="r.id">
-                  <object-value :value="r" :context="context"></object-value>
-               </div> -->
+               <div class="list-group-item" v-for="(r, index) of results" :key="index">
+                  <v-object-value :value="r" :result-index="index" :contextManager="contextManager" basePath=""></v-object-value>
+               </div>
             </div>
             <div v-if="context.results" class="row p-2 bg-light small text-muted">
                <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
@@ -208,6 +208,8 @@
             ...(props.resultContext ?? {}),
          });
 
+         const contextManager = new ResultContextManager(context);
+
          const showPath = (p: string) => {
             const index = context.hidePaths.indexOf(p);
             if (index === -1) {
@@ -231,10 +233,11 @@
          }
 
          if (context.results) {
+            results.value = context.results.data;
             console.debug('Set results from context results');
          }
 
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager };
       },
    });
 
@@ -248,6 +251,40 @@
       results: null,
       locked: false,
    });
+
+   /** Passed through the result rendering vue to provide access to and to mutate a result context */
+   export class ResultContextManager {
+      public constructor(public readonly context: QueryWidgetResultContext) {}
+
+      public getSummaryHtml(value: any, _path: string) {
+         const json = JSON.stringify(value);
+         return json;
+      }
+
+      public togglePathExpanded(path: string, resultIndex: number) {
+         const index = this.context.expandedPaths.indexed[resultIndex]?.indexOf(path);
+         if (index > -1) {
+            this.context.expandedPaths.indexed[resultIndex].splice(index, 1);
+         } else {
+            if (!this.context.expandedPaths.indexed[resultIndex]) {
+               this.context.expandedPaths.indexed[resultIndex] = [];
+            }
+            this.context.expandedPaths.indexed[resultIndex].push(path);
+         }
+      }
+
+      public useIsExpanded(path: string, resultIndex: number) {
+         return computed(() => {
+            if (this.context.expandAll) {
+               return true;
+            }
+            if (this.context.expandedPaths.global.includes(path)) {
+               return true;
+            }
+            return !!this.context.expandedPaths.indexed[resultIndex]?.includes(path);
+         });
+      }
+   }
 </script>
 
 <style lang="postcss" scoped>

@@ -5,6 +5,7 @@ import ModalVue from './Modal.vue';
 import { resizableDirective } from './resizableDirective';
 import SpinnerVue from './Spinner.vue';
 import WidgetTemplateVue from './WidgetTemplate.vue';
+import { valueVues } from './query-values';
 
 export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-spinner', SpinnerVue);
@@ -13,4 +14,8 @@ export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-created', CreatedVue);
    vueApp.component('v-widget-template', WidgetTemplateVue);
    vueApp.directive('resizable', resizableDirective);
+
+   for (const name of Object.getOwnPropertyNames(valueVues)) {
+      vueApp.component(name, (valueVues as any)[name]);
+   }
 }

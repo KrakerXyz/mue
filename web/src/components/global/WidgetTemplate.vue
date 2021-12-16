@@ -1,7 +1,7 @@
 <template>
    <div class="card h-100">
-      <div class="card-header px-2" @mousedown="($event: MouseEvent) => startDrag($event)">
-         <div class="row g-0">
+      <div class="card-header px-2">
+         <div class="row g-0" @mousedown="($event: MouseEvent) => startDrag($event)">
             <div class="col-auto d-flex align-items-center">
                <slot name="header-icon"></slot>
             </div>

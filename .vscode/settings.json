@@ -7,7 +7,8 @@
     "pino",
     "postcss",
     "prestart",
-    "typecheck"
+    "typecheck",
+    "Vues"
   ],
   "prettier.vueIndentScriptAndStyle": true
 }
