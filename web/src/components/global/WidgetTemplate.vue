@@ -1,7 +1,7 @@
 <template>
    <div class="card h-100">
       <div class="card-header px-2">
-         <div class="row g-0" @mousedown="($event: MouseEvent) => startDrag($event)">
+         <div class="row g-0" @mousedown.passive="($event: MouseEvent) => startDrag($event)">
             <div class="col-auto d-flex align-items-center">
                <slot name="header-icon"></slot>
             </div>
@@ -11,10 +11,10 @@
                </div>
             </div>
             <div class="col-auto">
-               <button class="btn p-0" @click="widgetManager.toggleMaximized(widget)" title="Maximize Panel">
+               <button class="btn p-0" @click.passive="widgetManager.toggleMaximized(widget)" title="Maximize Panel">
                   <i class="fal fa-window-maximize fa-fw fa-lg"></i>
                </button>
-               <button class="btn p-0" @click="widgetManager.remove(widget)" title="Close Panel">
+               <button class="btn p-0" @click.passive="widgetManager.remove(widget)" title="Close Panel">
                   <i class="fal fa-times fa-fw fa-lg"></i>
                </button>
             </div>
@@ -65,8 +65,8 @@
             }
             const parent = card.offsetParent as HTMLDivElement;
             mouseMoveOrigin = { x: evt.pageX, y: evt.pageY, offsetX: parent.offsetLeft, offsetY: parent.offsetTop };
-            window.addEventListener('mousemove', mouseMove, true);
-            window.addEventListener('mouseup', dragStop, true);
+            window.addEventListener('mousemove', mouseMove, { capture: true, passive: true });
+            window.addEventListener('mouseup', dragStop, { capture: true, passive: true });
             widgetManager?.bringToFront(widget);
          };
 

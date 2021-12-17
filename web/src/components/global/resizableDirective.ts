@@ -30,12 +30,28 @@ let lastActiveContext: ResizableContext | null = null;
 class ResizableContext {
 
    private _rects: ResizeRect[];
+   private readonly _mutationObserver: MutationObserver;
 
    public constructor(public readonly el: HTMLElement, public readonly options: ResizableOptions) {
       window.addEventListener('mousemove', this.mouseMove, { passive: true, capture: true });
       window.addEventListener('mousedown', this.mouseDown, { passive: true, capture: true });
       window.addEventListener('mouseup', this.mouseUp, { passive: true, capture: true });
       this._rects = getResizeRects(el);
+
+      let mutTimeout: NodeJS.Timeout | null = null;
+      this._mutationObserver = new window.MutationObserver(() => {
+         if (this._mouseDownOrigin) { return; }
+         if (mutTimeout) { return; }
+         mutTimeout = setTimeout(() => {
+            this._rects = getResizeRects(el);
+            mutTimeout = null;
+         }, 50);
+      });
+
+      this._mutationObserver.observe(el, {
+         attributes: true,
+         attributeFilter: ['style'],
+      });
    }
 
    private _lastActive: ResizeRect | null = null;
@@ -154,6 +170,7 @@ class ResizableContext {
       window.removeEventListener('mousemove', this.mouseMove);
       window.removeEventListener('mouseup', this.mouseUp);
       window.removeEventListener('mousedown', this.mouseDown);
+      this._mutationObserver.disconnect();
    }
 
 }

@@ -9,25 +9,46 @@
       <template #body>
          <div v-if="workspaceVms" class="list-group list-group-flush h-100 overflow-auto">
             <div class="list-group-item" v-for="w of workspaceVms" :key="w.workspace.id">
-               <div class="row g-2">
-                  <div class="col">{{ w.workspace.name }}</div>
-                  <template v-if="!w.isEditing">
-                     <div class="col-auto">
-                        <button class="btn p-0" @click="setEdit(w)"><i class="fal fa-edit"></i></button>
-                     </div>
-                     <div class="col-auto">
-                        <button class="btn p-0 text-danger" @click="confirmDelete = w"><i class="fal fa-trash-alt"></i></button>
-                     </div>
-                  </template>
-                  <template v-else>
-                     <div class="col-auto">
-                        <button class="btn p-0 text-success"><i class="fal fa-save"></i></button>
-                     </div>
-                     <div class="col-auto">
-                        <button class="btn p-0" @click="setEdit(null)"><i class="fal fa-times-square"></i></button>
-                     </div>
-                  </template>
+               <div class="row g-2 align-items-center" v-if="!w.isEditing">
+                  <div class="col-auto">
+                     <a :href="`/${w.workspace.id}`" target="_blank"><i class="fal fa-external-link"></i></a>
+                  </div>
+                  <div class="col fw-bold" v-if="w.workspace.id === selectedWorkspaceId">{{ w.workspace.name }}</div>
+                  <div class="col" v-if="w.workspace.id !== selectedWorkspaceId">
+                     <button class="btn btn-link p-0" @click.passive="selectedWorkspaceId = w.workspace.id">{{ w.workspace.name }}</button>
+                  </div>
+                  <div class="col-auto">
+                     <button class="btn p-0" @click="setEdit(w)"><i class="fal fa-edit"></i></button>
+                  </div>
+                  <div class="col-auto">
+                     <button class="btn p-0 text-danger" @click="confirmDelete = w"><i class="fal fa-trash-alt"></i></button>
+                  </div>
                </div>
+               <div class="row g-2" v-else>
+                  <div class="col">
+                     <input class="form-control" v-model="w.workspace.name" />
+                  </div>
+                  <div class="col-auto">
+                     <button class="btn p-0 text-success" @click="saveWorkspaces()"><i class="fal fa-save"></i></button>
+                  </div>
+                  <div class="col-auto">
+                     <button class="btn p-0" @click="setEdit(null)"><i class="fal fa-times-square"></i></button>
+                  </div>
+               </div>
+            </div>
+            <div class="list-group-item">
+               <h5 class="mt-2">New Workspace</h5>
+               <form class="row g-2" @submit.prevent="saveNew()">
+                  <div class="col">
+                     <div class="form-floating">
+                        <input id="new-name" class="form-control" placeholder="*" v-model="newWorkspace.workspace.name" />
+                        <label for="new-name">Name</label>
+                     </div>
+                  </div>
+                  <div class="col-auto">
+                     <button class="btn btn-primary h-100" :disabled="!isNewValid">Add</button>
+                  </div>
+               </form>
             </div>
          </div>
          <v-confirmation-modal v-if="confirmDelete" @cancel="confirmDelete = undefined" @confirm="deleteWorkspace()">
@@ -40,9 +61,10 @@
 
 <script lang="ts">
    import { computed, defineComponent, reactive, ref } from 'vue';
-   import { useWorkspaces, WidgetManager } from '@/services';
+   import { useSelectedWorkspaceId, useWorkspaces, useWs, WidgetManager } from '@/services';
    import { Widget, Workspace } from '@core/models';
    import { deepClone } from '@core/util';
+   import { v4 } from 'uuid';
 
    export default defineComponent({
       props: {
@@ -51,15 +73,19 @@
       },
       setup() {
          const workspaces = useWorkspaces();
+         const ws = useWs();
+         const selectedWorkspaceId = useSelectedWorkspaceId();
 
          const workspaceVms = computed(() => {
-            return workspaces.value?.map((ws) => {
-               const vm: WorkspaceVm = reactive({
-                  workspace: deepClone(ws),
-                  isEditing: false,
+            return [...(workspaces.value ?? [])]
+               .sort((a, b) => a.name.localeCompare(b.name))
+               .map((ws) => {
+                  const vm: WorkspaceVm = reactive({
+                     workspace: deepClone(ws),
+                     isEditing: false,
+                  });
+                  return vm;
                });
-               return vm;
-            });
          });
 
          const setEdit = (w: WorkspaceVm | null) => {
@@ -72,13 +98,63 @@
 
          const confirmDelete = ref<WorkspaceVm>();
          const deleteWorkspace = async () => {
-            if (!confirmDelete.value || !workspaces.value) {
+            if (!confirmDelete.value || !workspaceVms.value) {
                return;
             }
+            const index = workspaceVms.value.findIndex((w) => w.workspace.id === confirmDelete.value?.workspace.id);
+            if (index === -1) {
+               return;
+            }
+            workspaceVms.value.splice(index, 1);
+            saveWorkspaces();
             confirmDelete.value = undefined;
          };
 
-         return { workspaceVms, confirmDelete, deleteWorkspace, setEdit };
+         const saveWorkspaces = () => {
+            if (!workspaceVms.value) {
+               return;
+            }
+            const spaces = workspaceVms.value.map((w) => w.workspace);
+            ws.command({
+               name: 'command.config.workspaces.update',
+               workspaces: spaces,
+            });
+            setEdit(null);
+         };
+
+         const newWorkspace = ref<WorkspaceVm>(
+            reactive({
+               isEditing: false,
+               workspace: {
+                  id: v4(),
+                  name: '',
+                  description: '',
+               },
+            })
+         );
+
+         const isNewValid = computed(() => !!newWorkspace.value.workspace.name);
+
+         const saveNew = () => {
+            if (!isNewValid.value) {
+               return;
+            }
+            if (!workspaceVms.value) {
+               return;
+            }
+            workspaceVms.value.push(deepClone(newWorkspace.value));
+            saveWorkspaces();
+            newWorkspace.value = reactive({
+               isEditing: false,
+               workspace: {
+                  id: v4(),
+                  name: '',
+                  description: '',
+               },
+            });
+         };
+
+         return { workspaceVms, confirmDelete, deleteWorkspace, setEdit, saveWorkspaces, newWorkspace, saveNew, isNewValid, selectedWorkspaceId };
       },
    });
 

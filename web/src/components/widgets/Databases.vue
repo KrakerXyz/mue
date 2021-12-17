@@ -97,7 +97,7 @@
                      .filter((d) => !d.empty && (!nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower)))
                      .map((d) => ({ key: `${c.connection}-${d.name}`, connectionName: c.connection, databaseName: d.name }))
                )
-               .sort((a, b) => a.databaseName.localeCompare(b.databaseName));
+               .sort((a, b) => a.databaseName.localeCompare(b.databaseName) || a.connectionName.localeCompare(b.connectionName));
          });
 
          const dbSelected = (db: SelectedDatabase) => {

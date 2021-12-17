@@ -32,7 +32,7 @@
 </template>
 
 <script lang="ts">
-   import { toPromise, useConnections, useWorkspaces, useWs, WidgetManager } from '@/services';
+   import { toPromise, useConnections, useSelectedWorkspaceId, useWorkspaces, useWs, WidgetManager } from '@/services';
    import { v4 } from 'uuid';
    import { computed, defineComponent, ref, watch } from 'vue';
    import Workspace from './Workspace.vue';
@@ -45,7 +45,8 @@
          const ws = useWs();
          const workspaces = useWorkspaces();
          const hasConnections = computed(() => !!connections.value?.length);
-         const selectedWorkspace = computed(() => workspaces.value?.find((ws) => window.location.pathname.includes(ws.id)));
+         const selectedWorkspaceId = useSelectedWorkspaceId();
+         const selectedWorkspace = computed(() => workspaces.value?.find((ws) => ws.id === selectedWorkspaceId.value));
          const manager = ref<WidgetManager>();
 
          watch(
@@ -62,12 +63,16 @@
                   return;
                }
 
-               if (!selectedWorkspace.value) {
-                  window.location.href = `/${workspaces.value[0].id}`;
+               if (!selectedWorkspaceId.value) {
+                  selectedWorkspaceId.value = workspaces.value[0].id;
                   return;
                }
 
-               manager.value = new WidgetManager(selectedWorkspace.value.id);
+               if (selectedWorkspaceId.value === manager.value?.workspaceId) {
+                  return;
+               }
+
+               manager.value = new WidgetManager(selectedWorkspaceId.value);
 
                const consWatchStop = watch(
                   connections,
@@ -120,6 +125,7 @@
 <style lang="postcss" scoped="true">
    .navbar {
       -webkit-app-region: drag;
+      height: 58px;
    }
 
    .clickable {

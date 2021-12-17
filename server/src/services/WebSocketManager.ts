@@ -73,6 +73,12 @@ export class WebSocketManager {
 
         });
 
+        connection.socket.on('close', () => {
+            log.info('WS connection closed');
+            connection.subscriptions.forEach(s => s.subscription.unsubscribe());
+            connection.subscriptions.clear();
+        });
+
     };
 
 
