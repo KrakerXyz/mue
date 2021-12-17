@@ -8,6 +8,10 @@
             <div class="col">
                <h4 class="mb-0">Databases</h4>
             </div>
+         </div>
+      </template>
+      <template #header2>
+         <div class="row mt-2">
             <div class="col">
                <input class="form-control" v-model="nameFilter" placeholder="Filter" />
             </div>

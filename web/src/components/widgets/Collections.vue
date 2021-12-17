@@ -4,13 +4,17 @@
          <i class="fal fa-layer-group fa-fw fa-3x"></i>
       </template>
       <template #header>
-         <div class="row g-2">
+         <div class="row g-2 align-items-center">
             <div class="col-auto">
                <h4 class="mb-0">Collections: {{ database }}</h4>
             </div>
             <div class="col-auto">
                <v-connection-badge :name="connection"></v-connection-badge>
             </div>
+         </div>
+      </template>
+      <template #header2>
+         <div class="row mt-2">
             <div class="col">
                <input class="form-control" v-model="nameFilter" placeholder="Filter" />
             </div>
