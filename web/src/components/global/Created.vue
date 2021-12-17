@@ -3,7 +3,7 @@
 </template>
 
 <script lang="ts">
-   import { defineComponent, computed, ref } from 'vue';
+   import { defineComponent, computed, ref, watch } from 'vue';
    import { formatDistance } from 'date-fns';
 
    export default defineComponent({
@@ -11,24 +11,31 @@
          created: { type: Number, required: true },
       },
       setup(props) {
-         const ago = ref<string | undefined>(calcAgo(props.created));
+         const ago = ref<string | undefined>();
 
          const str = computed(() => {
             const d = new Date(props.created);
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + (ago.value ? ` (${ago.value})` : '');
          });
 
-         if (ago.value) {
-            const timeout = () => Math.max(5000, (Date.now() - props.created) / 5);
-
-            const runCalc = () => {
-               ago.value = calcAgo(props.created);
+         watch(
+            () => props.created,
+            (created) => {
+               ago.value = calcAgo(created);
                if (ago.value) {
+                  const timeout = () => Math.max(5000, (Date.now() - props.created) / 5);
+
+                  const runCalc = () => {
+                     ago.value = calcAgo(props.created);
+                     if (ago.value) {
+                        setTimeout(runCalc, timeout());
+                     }
+                  };
                   setTimeout(runCalc, timeout());
                }
-            };
-            setTimeout(runCalc, timeout());
-         }
+            },
+            { immediate: true }
+         );
 
          return { str };
       },

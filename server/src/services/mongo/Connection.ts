@@ -1,11 +1,9 @@
 
+import { ConnectionString } from '@core/models';
 import { MongoClient } from 'mongodb';
 
-export const dbs = {
-};
-
-export async function getConnection(name: string) {
-   const client = new MongoClient(dbs[name as keyof typeof dbs].connectionString);
+export async function getConnection(connectionString: ConnectionString) {
+   const client = new MongoClient(connectionString);
    await client.connect();
    return client;
 }

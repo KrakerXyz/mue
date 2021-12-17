@@ -5,7 +5,8 @@ const config: UserConfig = {
    plugins: [vue()],
    resolve: {
       alias: {
-         '@/': '/src/'
+         '@/': '/src/',
+         '@core/': '/../core/'
       }
    },
    build: {

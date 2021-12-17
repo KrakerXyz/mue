@@ -11,6 +11,9 @@
   "files": [
     "dist/"
   ],
+  "_moduleAliases": {
+    "@core": "dist/core"
+  },
   "license": "MIT",
   "scripts": {
     "clean": "rimraf ./dist/*",
@@ -18,24 +21,32 @@
     "start": "node --unhandled-rejections=strict --trace-warnings .",
     "build": "npm run clean && ttsc",
     "lint": "eslint ./src/**/*.ts",
-    "test": "jest"
+    "test": "jest",
+    "e": "npm run build && electron ."
   },
   "dependencies": {
     "ajv": "^6.12.6",
     "dotenv": "^10.0.0",
+    "eventemitter3": "^4.0.7",
     "fastify": "^3.19.1",
     "fastify-static": "^4.2.3",
     "fastify-websocket": "^4",
+    "level": "^7.0.1",
+    "module-alias": "^2.2.2",
     "mongodb": "^4.2.1",
     "tslib": "^2.3.1",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "zen-observable": "^0.8.15"
   },
   "devDependencies": {
     "@types/jest": "^27.0.3",
+    "@types/level": "^6.0.0",
     "@types/node": "^16.11.9",
     "@types/uuid": "^8.3.1",
+    "@types/zen-observable": "^0.8.3",
     "@typescript-eslint/eslint-plugin": "^5",
     "@typescript-eslint/parser": "^5",
+    "electron": "^16.0.4",
     "eslint": "^8",
     "jest": "^27.3.1",
     "pino-pretty": "^7",

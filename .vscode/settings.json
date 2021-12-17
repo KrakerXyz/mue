@@ -1,4 +1,14 @@
 {
-  "cSpell.words": ["FAKZ", "jlytg", "postcss", "typecheck"],
+  "cSpell.words": [
+    "EJSON",
+    "FAKZ",
+    "jlytg",
+    "nesw",
+    "pino",
+    "postcss",
+    "prestart",
+    "typecheck",
+    "Vues"
+  ],
   "prettier.vueIndentScriptAndStyle": true
 }
