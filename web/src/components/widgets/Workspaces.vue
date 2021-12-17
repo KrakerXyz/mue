@@ -32,7 +32,7 @@
          </div>
          <v-confirmation-modal v-if="confirmDelete" @cancel="confirmDelete = undefined" @confirm="deleteWorkspace()">
             <h3>Confirm Delete</h3>
-            Are you sure you want to delete the '{{ confirmDelete.name }}' workspace?
+            Are you sure you want to delete the '{{ confirmDelete.workspace.name }}' workspace?
          </v-confirmation-modal>
       </template>
    </v-widget-template>
@@ -70,7 +70,7 @@
             w.isEditing = true;
          };
 
-         const confirmDelete = ref<Workspace>();
+         const confirmDelete = ref<WorkspaceVm>();
          const deleteWorkspace = async () => {
             if (!confirmDelete.value || !workspaces.value) {
                return;

@@ -3,7 +3,7 @@
       <div class="navbar navbar-expand navbar-dark bg-dark sticky-top">
          <div class="container-fluid">
             <ul class="navbar-nav">
-               <template v-if="manager">
+               <template v-if="manager && selectedWorkspace">
                   <li class="nav-item">
                      <button class="btn btn-link nav-link mb-0" @click="openWidget('workspaces')">
                         <h5 class="mb-0 text-white"><i class="fal fa-window-restore me-1"></i>{{ selectedWorkspace.name }}</h5>
@@ -117,13 +117,17 @@
    });
 </script>
 
-<style lang="postcss">
+<style lang="postcss" scoped="true">
+   .navbar {
+      -webkit-app-region: drag;
+   }
+
    .clickable {
       cursor: pointer;
    }
 </style>
 
-<style>
+<style lang="postcss">
    .text-orange {
       color: var(--bs-orange);
    }

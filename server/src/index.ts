@@ -10,6 +10,8 @@ import 'module-alias/register';
 import { WebSocketManager } from './services';
 import path from 'path';
 
+import { app, BrowserWindow } from 'electron';
+
 
 console.log('Initializing Fastify');
 
@@ -59,4 +61,15 @@ const start = async () => {
         process.exit(1);
     }
 };
-start();
+
+if (process.versions['electron']) {
+    console.log('Opening electron');
+    start().then(() => {
+        app.whenReady().then(() => {
+            const win = new BrowserWindow({ width: 1200, height: 1000, autoHideMenuBar: true, frame: false });
+            win.loadURL('http://localhost:3000');
+        });
+    });
+} else {
+    start();
+}
