@@ -4,7 +4,7 @@ import { QueryWidgetResultContext } from '@core/models';
 export class ResultContextManager {
    public constructor(public readonly context: QueryWidgetResultContext) { }
 
-   public getSummaryHtml(value: any, path: string, maxLength: number = 600) {
+   public getSummaryText(value: any, path: string, maxLength: number = 600) {
 
       let json = '';
 
@@ -26,7 +26,7 @@ export class ResultContextManager {
                   const thisPath = `${path}[${i}]`;
                   const thisValue = value[i];
                   if (i) { json += ','; }
-                  const thisSummary = this.getSummaryHtml(thisValue, thisPath, maxLength - json.length);
+                  const thisSummary = this.getSummaryText(thisValue, thisPath, maxLength - json.length);
                   json += thisSummary;
                   if (json.length > maxLength) { break; }
                }
@@ -55,7 +55,7 @@ export class ResultContextManager {
          const thisValue = value[p];
          if (this.context.hideEmpty && (thisValue === null || thisValue === undefined || thisValue === '')) { continue; }
          if (i) { json += ','; }
-         const thisSummary = this.getSummaryHtml(thisValue, thisPath, maxLength - json.length);
+         const thisSummary = this.getSummaryText(thisValue, thisPath, maxLength - json.length);
          json += `${p}:${thisSummary}}`;
          if (json.length > maxLength) { break; }
       }
