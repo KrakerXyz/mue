@@ -1,8 +1,11 @@
 import { QueryWidgetResultContext } from '@core/models';
+import { markRaw } from 'vue';
 
 /** Passed through the result rendering vue to provide access to and to mutate a result context */
 export class ResultContextManager {
-   public constructor(public readonly context: QueryWidgetResultContext) { }
+   public constructor(public readonly context: QueryWidgetResultContext) {
+      if (context.results) { markRaw(context.results); }
+   }
 
    public getSummaryText(value: any, path: string, maxLength: number = 600) {
 
@@ -101,7 +104,7 @@ export class ResultContextManager {
       }
 
       if (this.context.hideEmpty) {
-         if (!value) {
+         if (value === null || value === undefined || value === '') {
             return false;
          }
 

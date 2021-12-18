@@ -95,9 +95,13 @@
                </div>
             </div>
             <div class="list-group flex-grow-1 overflow-auto font-monospace">
-               <div class="list-group-item" v-for="(r, index) of results" :key="index">
-                  <v-object-value :value="r" :result-index="index" :contextManager="contextManager" basePath=""></v-object-value>
-               </div>
+               <v-virtual-list :items="results">
+                  <template #default="slotProps">
+                     <div class="list-group-item">
+                        <v-object-value :value="slotProps.item" :result-index="slotProps.index" :contextManager="contextManager" basePath=""></v-object-value>
+                     </div>
+                  </template>
+               </v-virtual-list>
             </div>
             <div v-if="context.results" class="row p-2 bg-light small text-muted">
                <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
@@ -110,7 +114,7 @@
 <script lang="ts">
    import { ResultContextManager, useWs, WidgetManager } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
-   import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
    import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
@@ -195,7 +199,7 @@
 
             const now = Date.now();
             const obs = ws.subscribe(parsed.value);
-            const rawResults: Record<string, any>[] = [];
+            const rawResults: Record<string, any>[] = markRaw([]);
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {

@@ -6,7 +6,7 @@
 
 <script lang="ts">
    import { computed, defineComponent } from 'vue';
-   import { ResultContextManager } from '@/components/widgets/Query.vue';
+   import { ResultContextManager } from '@/services';
 
    export default defineComponent({
       props: {

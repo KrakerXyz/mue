@@ -7,6 +7,7 @@ import SpinnerVue from './Spinner.vue';
 import WidgetTemplateVue from './WidgetTemplate.vue';
 import { valueVues } from './query-values';
 import ConnectionBadgeVue from './ConnectionBadge.vue';
+import VirtualListVue from './VirtualList.vue';
 
 export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-spinner', SpinnerVue);
@@ -15,6 +16,8 @@ export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-created', CreatedVue);
    vueApp.component('v-widget-template', WidgetTemplateVue);
    vueApp.component('v-connection-badge', ConnectionBadgeVue);
+   vueApp.component('v-virtual-list', VirtualListVue);
+
    vueApp.directive('resizable', resizableDirective);
 
    for (const name of Object.getOwnPropertyNames(valueVues)) {
