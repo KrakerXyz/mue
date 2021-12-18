@@ -143,7 +143,7 @@ module.exports = {
 
       'complexity': [
          //https://eslint.org/docs/rules/complexity
-         'error'
+         'warn'
       ],
 
       'indent': [
@@ -154,7 +154,7 @@ module.exports = {
 
       'max-depth': [
          'error',
-         3
+         5
       ],
 
       'quotes': [

@@ -5,7 +5,7 @@
             <i class="fas fa-brackets-curly fa-fw"></i>
          </div>
          <div class="col text-truncate" v-if="!isExpanded">
-            <span class="align-text-bottom" v-html="contextManager.getSummaryHtml(value, basePath)"></span>
+            <span class="align-text-bottom" v-text="contextManager.getSummaryHtml(value, basePath)"></span>
          </div>
          <div class="col-auto">
             <span class="text-muted small">{{ fields.length }} field{{ !fields.length || fields.length > 1 ? 's' : '' }}</span>
@@ -35,7 +35,7 @@
 
 <script lang="ts">
    import { computed, defineComponent } from 'vue';
-   import { ResultContextManager } from '@/components/widgets/Query.vue';
+   import { ResultContextManager } from '@/services';
    import { getValueType, ValueType } from '.';
 
    export default defineComponent({

@@ -108,12 +108,12 @@
 </template>
 
 <script lang="ts">
-   import { useWs, WidgetManager } from '@/services';
+   import { ResultContextManager, useWs, WidgetManager } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
    import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
-   import { deepClone, deepFreeze } from '@core/util';
-   import { QueryWidgetResultContext, Widget } from '@core/models';
+   import { deepClone } from '@core/util';
+   import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
 
    export default defineComponent({
       props: {
@@ -248,81 +248,6 @@
          return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager };
       },
    });
-
-   const defaultResultContext: QueryWidgetResultContext = deepFreeze({
-      sortFields: false,
-      hideEmpty: false,
-      expandAll: false,
-      hidePaths: [],
-      expandedPaths: { global: [], indexed: {} },
-      favorite: false,
-      results: null,
-      locked: false,
-      pathFilter: undefined,
-   });
-
-   /** Passed through the result rendering vue to provide access to and to mutate a result context */
-   export class ResultContextManager {
-      public constructor(public readonly context: QueryWidgetResultContext) {}
-
-      public getSummaryHtml(value: any, _path: string) {
-         const json = JSON.stringify(value);
-         return json;
-      }
-
-      public togglePathExpanded(path: string, resultIndex: number) {
-         const index = this.context.expandedPaths.indexed[resultIndex]?.indexOf(path);
-         if (index > -1) {
-            this.context.expandedPaths.indexed[resultIndex].splice(index, 1);
-         } else {
-            if (!this.context.expandedPaths.indexed[resultIndex]) {
-               this.context.expandedPaths.indexed[resultIndex] = [];
-            }
-            this.context.expandedPaths.indexed[resultIndex].push(path);
-         }
-      }
-
-      public isExpanded(path: string, resultIndex: number) {
-         if (this.context.expandAll) {
-            return true;
-         }
-         if (this.context.expandedPaths.global.includes(path)) {
-            return true;
-         }
-         return !!this.context.expandedPaths.indexed[resultIndex]?.includes(path);
-      }
-
-      public toggleHidePath(path: string) {
-         const index = this.context.hidePaths.indexOf(path);
-         if (index === -1) {
-            this.context.hidePaths.push(path);
-         } else {
-            this.context.hidePaths.splice(index, 1);
-         }
-      }
-
-      public isVisible(path: string, value: any) {
-         if (this.context.hidePaths.includes(path)) {
-            return false;
-         }
-
-         if (this.context.pathFilter && !path.toLowerCase().includes(this.context.pathFilter.toLowerCase())) {
-            return false;
-         }
-
-         if (this.context.hideEmpty) {
-            if (!value) {
-               return false;
-            }
-
-            if (Array.isArray(value) && value.length === 0) {
-               return false;
-            }
-         }
-
-         return true;
-      }
-   }
 </script>
 
 <style lang="postcss" scoped>
