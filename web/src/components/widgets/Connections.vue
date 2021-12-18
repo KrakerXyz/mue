@@ -9,17 +9,17 @@
 
       <template #body>
          <div v-if="connections" class="list-group list-group-flush h-100 overflow-auto">
-            <div class="list-group-item list-group-item-action" v-for="con of connections" :key="con.name">
+            <button class="list-group-item list-group-item-action" v-for="con of connections" :key="con.name" @click="openDatabases(con)">
                <div class="row g-2">
                   <div class="col-auto">
                      <v-connection-badge :name="con.name"></v-connection-badge>
                   </div>
                   <div class="col text-muted small font-monospace text-truncate d-flex align-items-center">{{ con.connectionString }}</div>
                   <div class="col-auto">
-                     <button class="btn p-0 text-danger" @click="confirmDelete = con"><i class="fal fa-trash-alt"></i></button>
+                     <button class="btn p-0 text-danger" @click.stop="confirmDelete = con"><i class="fal fa-trash-alt"></i></button>
                   </div>
                </div>
-            </div>
+            </button>
             <div class="list-group-item">
                <h5 class="mt-2">New Connection</h5>
                <form class="row g-2" @submit.prevent="addConnection()">
@@ -61,7 +61,7 @@
          widget: { type: Object as () => Widget, required: true },
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
-      setup() {
+      setup(props) {
          const ws = useWs();
 
          const connections = useConnections();
@@ -101,7 +101,11 @@
             confirmDelete.value = undefined;
          };
 
-         return { connections, newConnection, isNewValid, addConnection, isSaving, confirmDelete, deleteConnection };
+         const openDatabases = (con: Connection) => {
+            props.widgetManager.add('databases', { connections: [con.name] });
+         };
+
+         return { connections, newConnection, isNewValid, addConnection, isSaving, confirmDelete, deleteConnection, openDatabases };
       },
    });
 </script>

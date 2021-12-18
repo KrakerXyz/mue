@@ -53,6 +53,7 @@ export class WidgetManager {
    };
 
    public updateProps<TName extends WidgetName>(w: Widget<TName>, props: Partial<WidgetProps<TName>>) {
+      if (!w.component.props) { w.component.props = {} as WidgetProps<TName>; }
       Object.assign(w.component.props, props);
       this.saveState();
    }

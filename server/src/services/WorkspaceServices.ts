@@ -4,6 +4,7 @@ import { commandEvents } from './commands/commandEvents';
 export class WorkspaceServices {
 
    private static readonly _db: Db = new Db();
+   private static readonly _cacheDb = new Db('cache');
    private static readonly _events = commandEvents;
 
    public get config(): Config {
@@ -11,7 +12,7 @@ export class WorkspaceServices {
    }
 
    public get cache(): Cache {
-      return new Cache(WorkspaceServices._db);
+      return new Cache(WorkspaceServices._cacheDb);
    }
 
    public get commandEvents() {

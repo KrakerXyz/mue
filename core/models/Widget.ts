@@ -26,7 +26,9 @@ export type WidgetProps<TName extends WidgetName> =
    TName extends 'connections'
    ? undefined
    : TName extends 'databases'
-   ? undefined
+   ? {
+      connections: string[] | null
+   }
    : TName extends 'collections'
    ? {
       connection: string;

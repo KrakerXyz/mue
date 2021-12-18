@@ -38,7 +38,10 @@ export const collectionsListHandler: Handler<CollectionsListSubscription> = (cmd
          sub.next(data);
          realSent = true;
          services.cache.update(cacheKey, data);
-      })();
+      })().catch(e => {
+         sub.error(`Error running ${cmd.name} handler: ${e}`);
+      });
+
 
       return () => {
          disposed = true;
