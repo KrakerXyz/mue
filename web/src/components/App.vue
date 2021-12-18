@@ -127,14 +127,14 @@
       -webkit-app-region: drag;
       height: 58px;
    }
-
-   .clickable {
-      cursor: pointer;
-   }
 </style>
 
 <style lang="postcss">
    .text-orange {
       color: var(--bs-orange);
+   }
+
+   .clickable {
+      cursor: pointer;
    }
 </style>

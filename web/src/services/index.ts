@@ -4,3 +4,4 @@ export * from './connections';
 export * from './WidgetManager';
 export * from './refToPromise';
 export * from './workspaces';
+export * from './favorites';

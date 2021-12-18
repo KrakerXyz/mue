@@ -40,6 +40,8 @@ export const databasesListHandler: Handler<DatabasesListSubscription> = (cmd, se
             }).catch(e => {
                sub.error(`Error getting database list for ${cmd.connection}: ${e}`);
             });
+         }).catch(e => {
+            sub.error(`Error getting client for ${connection.name}: ${e}`);
          });
 
       });

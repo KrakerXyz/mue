@@ -1,6 +1,6 @@
 import { WidgetName } from '@core/models';
 import { Component } from 'vue';
-import CollectionsVue from './Collections.vue';
+import CollectionsVue from './collections/Collections.vue';
 import ConnectionsVue from './Connections.vue';
 import DatabasesVue from './Databases.vue';
 import QueryVue from './Query.vue';
