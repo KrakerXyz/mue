@@ -41,6 +41,11 @@ export class WebSocketManager {
                         replyTo: msg.id
                     };
                     connection.socket.send(JSON.stringify(serverMessage));
+                }, err => {
+                    connection.socket.send(JSON.stringify({
+                        error: err,
+                        subscription: msg
+                    }));
                 });
 
                 connection.subscriptions.set(msg.id, { name: msg.data.name, observable: obs, subscription: sub });

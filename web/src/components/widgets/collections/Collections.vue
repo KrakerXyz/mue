@@ -4,13 +4,17 @@
          <i class="fal fa-layer-group fa-fw fa-3x"></i>
       </template>
       <template #header>
-         <div class="row g-2">
+         <div class="row g-2 align-items-center">
             <div class="col-auto">
                <h4 class="mb-0">Collections: {{ database }}</h4>
             </div>
             <div class="col-auto">
                <v-connection-badge :name="connection"></v-connection-badge>
             </div>
+         </div>
+      </template>
+      <template #header2>
+         <div class="row mt-2">
             <div class="col">
                <input class="form-control" v-model="nameFilter" placeholder="Filter" />
             </div>
@@ -18,20 +22,26 @@
       </template>
       <template #body>
          <div v-if="filteredCols" class="list-group list-group-flush h-100 overflow-auto">
-            <button v-for="c of filteredCols" :key="c.name" class="list-group-item list-group-item-action font-monospace" @click="openQuery(c)">
-               {{ c.name }}
-            </button>
+            <v-collection-item
+               v-for="collection of filteredCols"
+               :key="collection.name"
+               v-bind="{ connection, database, widgetManager, collection }"
+            ></v-collection-item>
          </div>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useSubscriptionRef, useWs, WidgetManager } from '@/services';
+   import { useFavorites, useSubscriptionRef, useWs, WidgetManager } from '@/services';
    import { computed, defineComponent, ref } from 'vue';
    import { Collection, Widget } from '@core/models';
+   import CollectionItemVue from './CollectionItem.vue';
 
    export default defineComponent({
+      components: {
+         'v-collection-item': CollectionItemVue,
+      },
       props: {
          connection: { type: String, required: true },
          database: { type: String, required: true },
@@ -40,6 +50,24 @@
       },
       setup(props) {
          const ws = useWs();
+         const favorites = useFavorites();
+
+         const isFavorite = (c: Collection) => {
+            return favorites.value?.collections.some((x) => x.name === c.name && x.connection === props.connection && x.database === props.database);
+         };
+
+         const collectionSort = (a: Collection, b: Collection): number => {
+            const aFav = isFavorite(a);
+            const bFav = isFavorite(b);
+            if (aFav && !bFav) {
+               return -1;
+            }
+            if (!aFav && bFav) {
+               return 1;
+            }
+            return a.name.localeCompare(b.name);
+         };
+
          const cols = useSubscriptionRef(
             ws
                .subscribe({
@@ -47,28 +75,24 @@
                   connection: props.connection,
                   database: props.database,
                })
-               .map((r) => r.collections.sort((a, b) => a.name.localeCompare(b.name)))
+               .map((r) => r.collections)
          );
-
-         const openQuery = (c: Collection) => {
-            props.widgetManager.add('query', {
-               connection: props.connection,
-               database: props.database,
-               collection: c.name,
-            } as any);
-         };
 
          const nameFilter = ref<string>();
 
          const filteredCols = computed(() => {
-            if (!nameFilter.value) {
+            if (!cols.value) {
                return cols.value;
             }
-            const lowerName = nameFilter.value.toLocaleLowerCase();
-            return cols.value?.filter((c) => c.name.toLocaleLowerCase().includes(lowerName));
+            let x = cols.value;
+            if (nameFilter.value) {
+               const lowerName = nameFilter.value.toLocaleLowerCase();
+               x = x.filter((c) => c.name.toLocaleLowerCase().includes(lowerName));
+            }
+            return x.sort(collectionSort);
          });
 
-         return { filteredCols, openQuery, nameFilter };
+         return { filteredCols, nameFilter };
       },
    });
 </script>

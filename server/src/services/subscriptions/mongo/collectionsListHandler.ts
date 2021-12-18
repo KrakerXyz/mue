@@ -31,14 +31,17 @@ export const collectionsListHandler: Handler<CollectionsListSubscription> = (cmd
          if (disposed) { return; }
 
          const data: CollectionListData = {
-            collections: results,
+            collections: results.map(c => ({ name: c.name })),
             connection: cmd.connection,
             database: cmd.database
          };
          sub.next(data);
          realSent = true;
          services.cache.update(cacheKey, data);
-      })();
+      })().catch(e => {
+         sub.error(`Error running ${cmd.name} handler: ${e}`);
+      });
+
 
       return () => {
          disposed = true;

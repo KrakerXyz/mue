@@ -12,5 +12,6 @@ export const commandHandlers: Record<SubscriptionNames, Handler<any>> = {
    'command.config.connections.update': config.connectionsUpdateHandler,
    'command.config.workspaces.update': config.workspacesUpdate,
    'command.config.workspaces.state.update': config.workspaceStateUpdateHandler,
+   'command.config.favorites.update': config.favoritesUpdateHandler,
    'command.subscription.unsubscribe': () => Promise.resolve() //This is handled by the websocket manager
 };

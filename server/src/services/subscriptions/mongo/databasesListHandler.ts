@@ -37,7 +37,11 @@ export const databasesListHandler: Handler<DatabasesListSubscription> = (cmd, se
                realSent = true;
                sub.next(data);
                services.cache.update(cacheKey, data);
+            }).catch(e => {
+               sub.error(`Error getting database list for ${cmd.connection}: ${e}`);
             });
+         }).catch(e => {
+            sub.error(`Error getting client for ${connection.name}: ${e}`);
          });
 
       });

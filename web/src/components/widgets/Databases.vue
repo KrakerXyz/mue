@@ -8,8 +8,26 @@
             <div class="col">
                <h4 class="mb-0">Databases</h4>
             </div>
+         </div>
+      </template>
+      <template #header2>
+         <div class="row mt-2">
             <div class="col">
-               <input class="form-control" v-model="nameFilter" placeholder="Filter" />
+               <input class="form-control" v-model="newNameFilter" placeholder="Filter" />
+            </div>
+         </div>
+         <div class="row mt-2">
+            <div class="col-aut">
+               <div class="form-check form-check-inline" v-for="name of connectionNames" :key="name">
+                  <input
+                     class="form-check-input"
+                     type="checkbox"
+                     :id="'conn-' + name"
+                     @change="toggleConnection(name)"
+                     :checked="connectionFilters?.includes(name)"
+                  />
+                  <label class="form-check-label" :for="'conn-' + name"><v-connection-badge :name="name"></v-connection-badge></label>
+               </div>
             </div>
          </div>
       </template>
@@ -37,6 +55,9 @@
 
    export default defineComponent({
       props: {
+         connections: { type: Array as () => string[], default: () => null },
+         nameFilter: { type: String, default: () => null },
+
          widget: { type: Object as () => Widget, required: true },
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
@@ -50,6 +71,29 @@
                })
                .map((d) => d.connections)
          );
+
+         const connectionNames = computed(() => connections.value?.map((c) => c.name).sort((a, b) => a.localeCompare(b)));
+
+         const connectionFilters = ref<string[] | undefined>(props.connections);
+         watch(
+            () => props.connections,
+            (cons) => (connectionFilters.value = cons)
+         );
+
+         watch(connectionFilters, (filter) => {
+            props.widgetManager.updateProps(props.widget, { connections: filter ?? null });
+         });
+
+         const toggleConnection = (name: string) => {
+            if (connectionFilters.value?.includes(name)) {
+               connectionFilters.value = connectionFilters.value.filter((n) => n !== name);
+               if (!connectionFilters.value.length) {
+                  connectionFilters.value = undefined;
+               }
+            } else {
+               connectionFilters.value = [...(connectionFilters.value ?? []), name];
+            }
+         };
 
          const databaseLists$Array = computed(() => {
             if (!connections.value) {
@@ -84,14 +128,17 @@
 
          onUnmounted(() => sub?.unsubscribe());
 
-         const nameFilter = ref<string>('');
+         const newNameFilter = ref<string>(props.nameFilter ?? '');
+
+         watch(newNameFilter, (name) => props.widgetManager.updateProps(props.widget, { nameFilter: name }));
 
          const dbs = computed(() => {
             if (!rawDbs.value) {
                return;
             }
-            const nameFilterLower = nameFilter.value.toLocaleLowerCase();
+            const nameFilterLower = newNameFilter.value.toLocaleLowerCase();
             return rawDbs.value
+               .filter((d) => !connectionFilters.value || connectionFilters.value.includes(d.connection))
                .flatMap((c) =>
                   c.databases
                      .filter((d) => !d.empty && (!nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower)))
@@ -107,7 +154,7 @@
             } as any);
          };
 
-         return { dbs, nameFilter, dbSelected };
+         return { dbs, newNameFilter, dbSelected, connectionNames, toggleConnection, connectionFilters };
       },
    });
 

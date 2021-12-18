@@ -11,6 +11,7 @@ export class Db {
       let db = instances.get(name);
       if (!db) {
          db = level(`.level/${name}`);
+         if (name === 'cache') { db.clear(); }
          instances.set(name, db);
       }
       this._level = db;

@@ -1,4 +1,4 @@
-import { Connection, Workspace, WorkspaceState } from '../models';
+import { Connection, Favorites, Workspace, WorkspaceState } from '../models';
 
 export type ConnectionsUpdateCommand = {
    name: 'command.config.connections.update';
@@ -13,7 +13,12 @@ export type WorkspacesUpdateCommand = {
 export type WorkspaceStateUpdateCommand = {
    name: 'command.config.workspaces.state.update';
    workspaceId: string;
-   state: WorkspaceState
+   state: WorkspaceState;
 }
 
-export type ConfigCommand = ConnectionsUpdateCommand | WorkspaceStateUpdateCommand | WorkspacesUpdateCommand;
+export type FavoritesUpdateCommand = {
+   name: 'command.config.favorites.update';
+   favorites: Favorites;
+}
+
+export type ConfigCommand = ConnectionsUpdateCommand | WorkspaceStateUpdateCommand | WorkspacesUpdateCommand | FavoritesUpdateCommand;

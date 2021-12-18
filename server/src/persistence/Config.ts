@@ -1,6 +1,6 @@
 import { Db, DbNamespace } from './Db';
 import { Connection } from '@core/models/Connection';
-import { Workspace, WorkspaceState } from '@core/models';
+import { Favorites, Workspace, WorkspaceState } from '@core/models';
 
 export class Config {
 
@@ -39,6 +39,15 @@ export class Config {
          }
       }
 
+   };
+
+   public readonly favorites = {
+      get: () => {
+         return this._ns.get('favorites');
+      },
+      update: (favorites: Favorites) => {
+         return this._ns.put('favorites', favorites);
+      }
    };
 
 }

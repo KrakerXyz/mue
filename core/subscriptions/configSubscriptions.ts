@@ -1,4 +1,4 @@
-import { Connection, Workspace, WorkspaceState } from '../models';
+import { Connection, Favorites, Workspace, WorkspaceState } from '../models';
 
 
 export type ConnectionsListSubscription = {
@@ -18,7 +18,13 @@ export type WorkspaceStateSubscription = {
 }
 export type WorkspaceStateData = WorkspaceState;
 
-export type ConfigSubscription = ConnectionsListSubscription | WorkspaceStateSubscription | WorkspacesListSubscription;
+export type FavoritesSubscription = {
+   name: 'subscription.config.favorites'
+}
+
+export type FavoritesData = Favorites;
+
+export type ConfigSubscription = ConnectionsListSubscription | WorkspaceStateSubscription | WorkspacesListSubscription | FavoritesSubscription;
 
 export type ConfigSubscriptionDataType<TSubscription extends ConfigSubscription> =
    TSubscription extends ConnectionsListSubscription
@@ -27,4 +33,6 @@ export type ConfigSubscriptionDataType<TSubscription extends ConfigSubscription>
    ? WorkspaceStateData
    : TSubscription extends WorkspacesListSubscription
    ? WorkspacesListData
+   : TSubscription extends FavoritesSubscription
+   ? FavoritesData
    : never;
