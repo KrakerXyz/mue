@@ -114,7 +114,7 @@ export class WidgetManager {
             },
          };
          this._ws.command(cmd);
-      }, 700);
+      }, 500);
    }
 
 

@@ -45,19 +45,37 @@
             <div class="row p-2 border-bottom bg-light d-flex align-items-center">
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="sort-fields" v-model="context.sortFields" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="sort-fields"
+                        :checked="context.sortFields"
+                        @change="setContextProperty('sortFields', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="sort-fields">Sort Fields</label>
                   </div>
                </div>
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="hide-empty" v-model="context.hideEmpty" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="hide-empty"
+                        :checked="context.hideEmpty"
+                        @change="setContextProperty('hideEmpty', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="hide-empty">Hide Empty</label>
                   </div>
                </div>
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="expand-all" v-model="context.expandAll" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="expand-all"
+                        :checked="context.expandAll"
+                        @change="setContextProperty('expandAll', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="expand-all">Expand All</label>
                   </div>
                </div>
@@ -94,15 +112,13 @@
                   </button>
                </div>
             </div>
-            <div class="list-group flex-grow-1 overflow-auto font-monospace">
-               <v-virtual-list :items="results">
-                  <template #default="slotProps">
-                     <div class="list-group-item">
-                        <v-object-value :value="slotProps.item" :result-index="slotProps.index" :contextManager="contextManager" basePath=""></v-object-value>
-                     </div>
-                  </template>
-               </v-virtual-list>
-            </div>
+            <v-virtual-list :items="results" class="overflow-auto list-group flex-grow-1 font-monospace">
+               <template #default="slotProps">
+                  <div class="list-group-item">
+                     <v-object-value :value="slotProps.item" :result-index="slotProps.index" :contextManager="contextManager" basePath=""></v-object-value>
+                  </div>
+               </template>
+            </v-virtual-list>
             <div v-if="context.results" class="row p-2 bg-light small text-muted">
                <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
             </div>
@@ -114,7 +130,7 @@
 <script lang="ts">
    import { ResultContextManager, useWs, WidgetManager } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
-   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch, nextTick } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
    import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
@@ -249,7 +265,17 @@
             console.debug('Set results from context results');
          }
 
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager };
+         const setContextProperty = async (prop: keyof QueryWidgetResultContext, value: any) => {
+            const tmpResults = results.value;
+            results.value = [];
+            await nextTick();
+            (context as any)[prop] = value;
+
+            await nextTick();
+            results.value = tmpResults;
+         };
+
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty };
       },
    });
 </script>
