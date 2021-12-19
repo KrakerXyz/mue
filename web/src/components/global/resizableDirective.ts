@@ -29,6 +29,7 @@ let lastActiveContext: ResizableContext | null = null;
 
 class ResizableContext {
 
+   private _unmounted = false;
    private _rects: ResizeRect[];
    private readonly _mutationObserver: MutationObserver;
 
@@ -59,6 +60,11 @@ class ResizableContext {
    private _mouseDownOrigin: { x: number, y: number, rect: { top: number; left: number, width: number, height: number; } } | null = null;
 
    private readonly mouseMove = (evt: MouseEvent) => {
+
+      if (this._unmounted) {
+         console.warn('MM on unmounted');
+         return;
+      }
 
       //console.log(`Mousemove ${this.el.id}`);
       if (lastActiveContext && lastActiveContext !== this) {
@@ -167,9 +173,10 @@ class ResizableContext {
    };
 
    public unmount() {
-      window.removeEventListener('mousemove', this.mouseMove);
-      window.removeEventListener('mouseup', this.mouseUp);
-      window.removeEventListener('mousedown', this.mouseDown);
+      this._unmounted = true;
+      window.removeEventListener('mousemove', this.mouseMove, true);
+      window.removeEventListener('mouseup', this.mouseUp, true);
+      window.removeEventListener('mousedown', this.mouseDown, true);
       this._mutationObserver.disconnect();
    }
 

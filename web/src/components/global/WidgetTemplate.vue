@@ -50,8 +50,8 @@
          };
 
          const dragStop = () => {
-            window.removeEventListener('mouseup', dragStop);
-            window.removeEventListener('mousemove', mouseMove);
+            window.removeEventListener('mouseup', dragStop, true);
+            window.removeEventListener('mousemove', mouseMove, true);
             mouseMoveOrigin = null;
          };
 
