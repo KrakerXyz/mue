@@ -5,7 +5,7 @@ import worker, { pluginHelper } from 'vite-plugin-worker';
 
 const config: UserConfig = {
    plugins: [
-      (comlink as any).default({ typeFile: 'comlink-workers.d.ts' }),
+      (comlink as any).default({ typeFile: './src/comlink-workers.d.ts' }),
       pluginHelper(),
       (worker as any).default({}),
       vue()
