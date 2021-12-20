@@ -4,12 +4,12 @@
          <slot :item="item.item" :index="item.index"></slot>
       </div>
       <!-- min-height is intentional here. I tried with height but it doesn't haven an effect on the scroll -->
-      <div v-if="overflow.bottom" :style="{ 'min-height': `${overflow.bottom}px` }"></div>
+      <div :style="{ 'min-height': `${overflow.bottom}px` }" ref="bottomDummy"></div>
    </div>
 </template>
 
 <script lang="ts">
-   import { computed, defineComponent, nextTick, onUnmounted, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
    export default defineComponent({
       props: {
@@ -33,10 +33,10 @@
             bottom: 0,
          });
 
-         let observer: ResizeObserver | null = null;
+         let resizeObserver: ResizeObserver | null = null;
 
          const reset = async () => {
-            observer?.disconnect();
+            resizeObserver?.disconnect();
             displayItems.value = reactive([]);
             overflow.bottom = 0;
             overflow.top = 0;
@@ -54,22 +54,45 @@
             await reset();
             await fit(vms, displayItems.value, div, overflow);
 
-            observer = new ResizeObserver(async () => {
+            resizeObserver = new ResizeObserver(async () => {
                console.debug('Resize triggered');
                await fit(vms, displayItems.value, div, overflow);
             });
-            observer.observe(div);
+            resizeObserver.observe(div);
          });
 
-         onUnmounted(() => observer?.disconnect());
+         const bottomDummy = ref<HTMLDivElement>();
 
-         return { displayItems, parent, overflow };
+         onMounted(() => {
+            if (!parent.value || !bottomDummy.value) {
+               console.warn('Missing parent');
+               return;
+            }
+
+            parent.value.addEventListener(
+               'scroll',
+               () => {
+                  fit(vms.value, displayItems.value, parent.value!, overflow);
+               },
+               { capture: true, passive: true }
+            );
+         });
+
+         onUnmounted(() => {
+            console.debug('VirtualList unmounted');
+            resizeObserver?.disconnect();
+         });
+
+         return { displayItems, parent, overflow, bottomDummy };
       },
    });
 
    async function fit(srcItems: ItemVm[], displayItems: ItemVm[], containerDiv: HTMLDivElement, overflow: Overflow): Promise<void> {
       const origDisplayLen = displayItems.length;
-      while (containerDiv.clientHeight >= containerDiv.scrollHeight - (overflow.bottom + overflow.top) && displayItems.length < srcItems.length) {
+      while (
+         containerDiv.clientHeight >= containerDiv.scrollHeight - containerDiv.scrollTop - (overflow.bottom + overflow.top) &&
+         displayItems.length < srcItems.length
+      ) {
          displayItems.push(srcItems[displayItems.length]);
          await nextTick();
       }

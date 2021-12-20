@@ -40,7 +40,7 @@
             </div>
          </div>
       </template>
-      <template #body v-if="results">
+      <template #body>
          <div class="h-100 d-flex flex-column">
             <div class="row p-2 border-bottom bg-light d-flex align-items-center">
                <div class="col-auto">
@@ -112,7 +112,7 @@
                   </button>
                </div>
             </div>
-            <v-virtual-list :items="results" class="overflow-auto list-group flex-grow-1 font-monospace">
+            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace">
                <template #default="slotProps">
                   <div class="list-group-item">
                      <v-object-value :value="slotProps.item" :result-index="slotProps.index" :contextManager="contextManager" basePath=""></v-object-value>
@@ -254,8 +254,6 @@
             { deep: true }
          );
 
-         onUnmounted(() => sub?.unsubscribe());
-
          if (!invalid.value && !context.results) {
             exec();
          }
@@ -274,6 +272,11 @@
             await nextTick();
             results.value = tmpResults;
          };
+
+         onUnmounted(() => {
+            sub?.unsubscribe();
+            console.debug('Query.vue unmounted');
+         });
 
          return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty };
       },
