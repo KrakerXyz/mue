@@ -1,3 +1,5 @@
+import { deepFreeze } from '@core/util';
+
 export interface QueryWidgetResultContext {
    sortFields: boolean;
    hideEmpty: boolean;
@@ -11,5 +13,15 @@ export interface QueryWidgetResultContext {
    favorite: boolean;
    locked: boolean;
    pathFilter: string | null | undefined;
-   results: { created: number, data: Record<string, any>[] } | null;
 }
+
+export const defaultResultContext: QueryWidgetResultContext = deepFreeze({
+   sortFields: false,
+   hideEmpty: false,
+   expandAll: false,
+   hidePaths: [],
+   expandedPaths: { global: [], indexed: {} },
+   favorite: false,
+   locked: false,
+   pathFilter: undefined,
+});

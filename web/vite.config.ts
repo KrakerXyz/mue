@@ -1,8 +1,15 @@
 import type { UserConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import comlink from 'vite-plugin-comlink';
+import worker, { pluginHelper } from 'vite-plugin-worker';
 
 const config: UserConfig = {
-   plugins: [vue()],
+   plugins: [
+      (comlink as any).default({ typeFile: './src/comlink-workers.d.ts' }),
+      pluginHelper(),
+      (worker as any).default({}),
+      vue()
+   ],
    resolve: {
       alias: {
          '@/': '/src/',

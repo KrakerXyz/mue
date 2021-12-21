@@ -4,8 +4,9 @@ import { Command, CommandServerMessage, CommandClientMessage, UnsubscribeSubscri
 import { Subscription, SubscriptionServerMessage, SubscriptionClientMessage, SubscriptionDataType } from '@core/subscriptions';
 import { isCommandServerMessage } from '@core/index';
 import Observable from 'zen-observable';
+import { proxy } from 'comlink';
+import WsWorker from 'comlink:./ws-worker';
 
-let ws: WebSocket | undefined;
 const state = reactive({
    connected: false
 });
@@ -13,34 +14,14 @@ const state = reactive({
 const inflightCommands = new Map<string, { resolve: (msg: CommandServerMessage) => void | Promise<void>, reject: () => void }>();
 const subscriptions = new Map<string, ZenObservable.SubscriptionObserver<SubscriptionDataType<any>>>();
 
-const sendQueue: any[] = [];
-
-const queueSend = (message?: SubscriptionClientMessage | CommandClientMessage) => {
-   if (message) { sendQueue.push(message); }
-   if (!sendQueue.length) { return; }
-
-   if (!state.connected) { return; }
-
-   const toSend = sendQueue.shift();
-   ws?.send(JSON.stringify(toSend));
-
-   queueSend();
-};
+let wsWorker: ReturnType<typeof WsWorker> | null = null;
 
 export function useWs() {
-   if (!ws) {
-      const url = `ws${window.location.protocol === 'https' ? 's' : ''}://${window.location.host}/ws`;
-      ws = new WebSocket(url);
-      ws.addEventListener('open', () => {
-         state.connected = true;
-         queueSend();
-      });
-      ws.addEventListener('close', () => {
-         state.connected = false;
-      });
+   if (!wsWorker) {
 
-      ws.addEventListener('message', data => {
-         const obj: CommandServerMessage | SubscriptionServerMessage = JSON.parse(data.data);
+      wsWorker = WsWorker();
+
+      wsWorker.addEventListener('message', proxy((obj: CommandServerMessage | SubscriptionServerMessage) => {
          if (isCommandServerMessage(obj)) {
             const prom = inflightCommands.get(obj.replyTo);
             if (!prom) { return; }
@@ -56,8 +37,12 @@ export function useWs() {
             sub.next(obj.data);
          }
 
-      });
+      }));
    }
+
+   wsWorker.addEventListener('connected', proxy((connected: boolean) => {
+      state.connected = connected;
+   }));
 
    return {
       state: readonly(state),
@@ -71,14 +56,14 @@ export function useWs() {
 
             subscriptions.set(clientMessage.id, sub);
 
-            queueSend(clientMessage);
+            wsWorker?.send(clientMessage);
 
             return () => {
                const unsubscribeMessage: UnsubscribeSubscriptionCommand = {
                   id: clientMessage.id,
                   name: 'command.subscription.unsubscribe'
                };
-               queueSend({ id: v4(), data: unsubscribeMessage });
+               wsWorker?.send({ id: v4(), data: unsubscribeMessage });
                subscriptions.delete(clientMessage.id);
             };
          });
@@ -91,7 +76,8 @@ export function useWs() {
 
          return new Promise<CommandServerMessage>((resolve, reject) => {
             inflightCommands.set(clientMessage.id, { resolve, reject });
-            queueSend(clientMessage);
+            //The message might contain object which Vue has created Symbols on which are not transferable
+            wsWorker?.send(JSON.stringify(clientMessage));
          });
       }
    };

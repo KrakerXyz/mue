@@ -5,3 +5,5 @@ export * from './WidgetManager';
 export * from './refToPromise';
 export * from './workspaces';
 export * from './favorites';
+export * from './ResultContextManager';
+export * from './EventEmitter';

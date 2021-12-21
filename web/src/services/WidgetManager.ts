@@ -104,7 +104,7 @@ export class WidgetManager {
       if (this._updateStateThrottle) {
          clearTimeout(this._updateStateThrottle);
       }
-      this._updateStateThrottle = setTimeout(() => {
+      this._updateStateThrottle = setTimeout(async () => {
          this._updateStateThrottle = null;
          const cmd: WorkspaceStateUpdateCommand = {
             name: 'command.config.workspaces.state.update',
@@ -114,7 +114,7 @@ export class WidgetManager {
             },
          };
          this._ws.command(cmd);
-      }, 700);
+      }, 500);
    }
 
 

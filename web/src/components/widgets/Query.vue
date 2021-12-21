@@ -40,24 +40,42 @@
             </div>
          </div>
       </template>
-      <template #body v-if="results">
+      <template #body>
          <div class="h-100 d-flex flex-column">
             <div class="row p-2 border-bottom bg-light d-flex align-items-center">
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="sort-fields" v-model="context.sortFields" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="sort-fields"
+                        :checked="context.sortFields"
+                        @change="setContextProperty('sortFields', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="sort-fields">Sort Fields</label>
                   </div>
                </div>
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="hide-empty" v-model="context.hideEmpty" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="hide-empty"
+                        :checked="context.hideEmpty"
+                        @change="setContextProperty('hideEmpty', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="hide-empty">Hide Empty</label>
                   </div>
                </div>
                <div class="col-auto">
                   <div class="form-check">
-                     <input class="form-check-input" type="checkbox" id="expand-all" v-model="context.expandAll" />
+                     <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="expand-all"
+                        :checked="context.expandAll"
+                        @change="setContextProperty('expandAll', ($event.target as any).checked)"
+                     />
                      <label class="form-check-label" for="expand-all">Expand All</label>
                   </div>
                </div>
@@ -94,26 +112,35 @@
                   </button>
                </div>
             </div>
-            <div class="list-group flex-grow-1 overflow-auto font-monospace">
-               <div class="list-group-item" v-for="(r, index) of results" :key="index">
-                  <v-object-value :value="r" :result-index="index" :contextManager="contextManager" basePath=""></v-object-value>
-               </div>
-            </div>
-            <div v-if="context.results" class="row p-2 bg-light small text-muted">
-               <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
-            </div>
+            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace">
+               <template #default="slotProps">
+                  <div class="list-group-item">
+                     <div class="row g-1 align-items-center">
+                        <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
+                        <div class="col overflow-hidden">
+                           <v-object-value
+                              :value="slotProps.item"
+                              :result-index="slotProps.index"
+                              :contextManager="contextManager"
+                              basePath=""
+                           ></v-object-value>
+                        </div>
+                     </div>
+                  </div>
+               </template>
+            </v-virtual-list>
          </div>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useWs, WidgetManager } from '@/services';
+   import { ResultContextManager, useWs, WidgetManager } from '@/services';
    import { Document, QuerySubscription } from '@core/subscriptions';
-   import { computed, defineComponent, onUnmounted, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch, nextTick } from 'vue';
    import JSON5 from 'json5';
-   import { deepClone, deepFreeze } from '@core/util';
-   import { QueryWidgetResultContext, Widget } from '@core/models';
+   import { deepClone } from '@core/util';
+   import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
 
    export default defineComponent({
       props: {
@@ -195,7 +222,7 @@
 
             const now = Date.now();
             const obs = ws.subscribe(parsed.value);
-            const rawResults: Record<string, any>[] = [];
+            const rawResults: Record<string, any>[] = markRaw([]);
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
@@ -203,7 +230,6 @@
                }
                if (d.complete) {
                   console.debug(`Finished query in ${Date.now() - now}ms with ${rawResults.length} records`);
-                  context.results = { created: Date.now(), data: rawResults };
                   results.value = rawResults;
                   isRunning.value = false;
                }
@@ -211,7 +237,7 @@
          };
 
          const context: QueryWidgetResultContext = reactive({
-            ...defaultResultContext,
+            ...deepClone(defaultResultContext),
             ...{ expandedPaths: deepClone(defaultResultContext.expandedPaths) },
             ...(props.resultContext ?? {}),
          });
@@ -234,95 +260,28 @@
             { deep: true }
          );
 
-         onUnmounted(() => sub?.unsubscribe());
-
-         if (!invalid.value && !context.results) {
+         if (!invalid.value) {
             exec();
          }
 
-         if (context.results) {
-            results.value = context.results.data;
-            console.debug('Set results from context results');
-         }
+         const setContextProperty = async (prop: keyof QueryWidgetResultContext, value: any) => {
+            const tmpResults = results.value;
+            results.value = [];
+            await nextTick();
+            (context as any)[prop] = value;
 
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager };
+            await nextTick();
+            results.value = tmpResults;
+         };
+
+         onUnmounted(() => {
+            sub?.unsubscribe();
+            console.debug('Query.vue unmounted');
+         });
+
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty };
       },
    });
-
-   const defaultResultContext: QueryWidgetResultContext = deepFreeze({
-      sortFields: false,
-      hideEmpty: false,
-      expandAll: false,
-      hidePaths: [],
-      expandedPaths: { global: [], indexed: {} },
-      favorite: false,
-      results: null,
-      locked: false,
-      pathFilter: undefined,
-   });
-
-   /** Passed through the result rendering vue to provide access to and to mutate a result context */
-   export class ResultContextManager {
-      public constructor(public readonly context: QueryWidgetResultContext) {}
-
-      public getSummaryHtml(value: any, _path: string) {
-         const json = JSON.stringify(value);
-         return json;
-      }
-
-      public togglePathExpanded(path: string, resultIndex: number) {
-         const index = this.context.expandedPaths.indexed[resultIndex]?.indexOf(path);
-         if (index > -1) {
-            this.context.expandedPaths.indexed[resultIndex].splice(index, 1);
-         } else {
-            if (!this.context.expandedPaths.indexed[resultIndex]) {
-               this.context.expandedPaths.indexed[resultIndex] = [];
-            }
-            this.context.expandedPaths.indexed[resultIndex].push(path);
-         }
-      }
-
-      public isExpanded(path: string, resultIndex: number) {
-         if (this.context.expandAll) {
-            return true;
-         }
-         if (this.context.expandedPaths.global.includes(path)) {
-            return true;
-         }
-         return !!this.context.expandedPaths.indexed[resultIndex]?.includes(path);
-      }
-
-      public toggleHidePath(path: string) {
-         const index = this.context.hidePaths.indexOf(path);
-         if (index === -1) {
-            this.context.hidePaths.push(path);
-         } else {
-            this.context.hidePaths.splice(index, 1);
-         }
-      }
-
-      public isVisible(path: string, value: any) {
-         if (this.context.hidePaths.includes(path)) {
-            return false;
-         }
-
-         if (this.context.pathFilter && !path.toLowerCase().includes(this.context.pathFilter.toLowerCase())) {
-            return false;
-         }
-
-         if (this.context.hideEmpty) {
-            if (!value) {
-               return false;
-            }
-
-            if (Array.isArray(value) && value.length === 0) {
-               return false;
-            }
-         }
-
-         return true;
-      }
-   }
 </script>
 
 <style lang="postcss" scoped>
@@ -330,5 +289,9 @@
       min-width: 300px;
       z-index: 1;
       display: block !important;
+   }
+
+   .col-index {
+      width: 3rem;
    }
 </style>
