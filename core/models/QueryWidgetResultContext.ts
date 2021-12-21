@@ -13,7 +13,6 @@ export interface QueryWidgetResultContext {
    favorite: boolean;
    locked: boolean;
    pathFilter: string | null | undefined;
-   results: { created: number, data: Record<string, any>[] } | null;
 }
 
 export const defaultResultContext: QueryWidgetResultContext = deepFreeze({
@@ -23,7 +22,6 @@ export const defaultResultContext: QueryWidgetResultContext = deepFreeze({
    hidePaths: [],
    expandedPaths: { global: [], indexed: {} },
    favorite: false,
-   results: null,
    locked: false,
    pathFilter: undefined,
 });

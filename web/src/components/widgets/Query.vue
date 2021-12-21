@@ -115,13 +115,20 @@
             <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace">
                <template #default="slotProps">
                   <div class="list-group-item">
-                     <v-object-value :value="slotProps.item" :result-index="slotProps.index" :contextManager="contextManager" basePath=""></v-object-value>
+                     <div class="row g-1 align-items-center">
+                        <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
+                        <div class="col overflow-hidden">
+                           <v-object-value
+                              :value="slotProps.item"
+                              :result-index="slotProps.index"
+                              :contextManager="contextManager"
+                              basePath=""
+                           ></v-object-value>
+                        </div>
+                     </div>
                   </div>
                </template>
             </v-virtual-list>
-            <div v-if="context.results" class="row p-2 bg-light small text-muted">
-               <div class="col">Loaded <v-created :created="context.results.created"></v-created></div>
-            </div>
          </div>
       </template>
    </v-widget-template>
@@ -223,7 +230,6 @@
                }
                if (d.complete) {
                   console.debug(`Finished query in ${Date.now() - now}ms with ${rawResults.length} records`);
-                  context.results = { created: Date.now(), data: rawResults };
                   results.value = rawResults;
                   isRunning.value = false;
                }
@@ -231,7 +237,7 @@
          };
 
          const context: QueryWidgetResultContext = reactive({
-            ...defaultResultContext,
+            ...deepClone(defaultResultContext),
             ...{ expandedPaths: deepClone(defaultResultContext.expandedPaths) },
             ...(props.resultContext ?? {}),
          });
@@ -254,13 +260,8 @@
             { deep: true }
          );
 
-         if (!invalid.value && !context.results) {
+         if (!invalid.value) {
             exec();
-         }
-
-         if (context.results) {
-            results.value = context.results.data;
-            console.debug('Set results from context results');
          }
 
          const setContextProperty = async (prop: keyof QueryWidgetResultContext, value: any) => {
@@ -288,5 +289,9 @@
       min-width: 300px;
       z-index: 1;
       display: block !important;
+   }
+
+   .col-index {
+      width: 3rem;
    }
 </style>
