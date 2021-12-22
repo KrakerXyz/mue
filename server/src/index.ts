@@ -11,6 +11,7 @@ import { WebSocketManager } from './services';
 import path from 'path';
 
 import { app, BrowserWindow } from 'electron';
+import { test } from './api/test';
 
 
 console.log('Initializing Fastify');
@@ -42,6 +43,8 @@ server.register(fastifyStatic, {
 });
 
 server.get('/ws', { websocket: true }, webSocketManager.handler);
+
+server.route(test);
 
 server.setNotFoundHandler((req, res) => {
     if (req.method !== 'GET') { return res.status(404).send(); }
