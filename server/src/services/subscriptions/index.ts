@@ -4,7 +4,10 @@ import { collectionsListHandler, databasesListHandler, queryHandler } from './mo
 import Observable from 'zen-observable';
 import * as config from './config';
 
-export type Handler<T extends Subscription = Subscription> = (cmd: T, services: WorkspaceServices) => Observable<SubscriptionDataType<T>>
+export type OnceHandler<T extends Subscription = Subscription> = (cmd: T, services: WorkspaceServices) => Observable<SubscriptionDataType<T>>;
+export type PagedHandler<T extends Subscription = Subscription> = (cmd: T, services: WorkspaceServices, nextPage: Observable<void>) => Observable<SubscriptionDataType<T>>;
+
+export type Handler<T extends Subscription = Subscription> = OnceHandler<T> | PagedHandler<T>;
 
 type SubscriptionNames = Subscription['name'];
 

@@ -141,6 +141,7 @@
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
    import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
+   import { v4 } from 'uuid';
 
    export default defineComponent({
       props: {
@@ -221,17 +222,29 @@
             isRunning.value = true;
 
             const now = Date.now();
-            const obs = ws.subscribe(parsed.value);
+            const subId = v4();
+            const obs = ws.subscribe(parsed.value, subId);
             const rawResults: Record<string, any>[] = markRaw([]);
+
+            let secondPageLoaded = false;
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
                   rawResults.push(r);
                }
-               if (d.complete) {
-                  console.debug(`Finished query in ${Date.now() - now}ms with ${rawResults.length} records`);
+               if (d.pageComplete) {
+                  console.debug(`Finished page in ${Date.now() - now}ms with ${rawResults.length} records`);
                   results.value = rawResults;
                   isRunning.value = false;
+
+                  if (!secondPageLoaded) {
+                     console.debug('Loading second page');
+                     secondPageLoaded = true;
+                     ws.command({
+                        id: subId,
+                        name: 'command.subscription.nextPage',
+                     });
+                  }
                }
             });
          };

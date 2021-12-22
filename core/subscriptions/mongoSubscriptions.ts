@@ -30,7 +30,9 @@ export type QuerySubscription<TCommand extends 'find' | 'aggregate' = 'find' | '
 export type QueryData = {
    connection: string;
    results: Record<string, any>[];
-   complete: boolean;
+   page: number;
+   queryComplete: boolean;
+   pageComplete: boolean;
 }
 
 export type MongoSubscription = DatabasesListSubscription | CollectionsListSubscription | QuerySubscription;

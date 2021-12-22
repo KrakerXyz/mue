@@ -1,9 +1,9 @@
 import { getConnection } from '../..';
 import { CollectionListData, CollectionsListSubscription, SubscriptionDataType } from '@core/subscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const collectionsListHandler: Handler<CollectionsListSubscription> = (cmd, services) => {
+export const collectionsListHandler: OnceHandler<CollectionsListSubscription> = (cmd, services) => {
 
    const obs = new Observable<SubscriptionDataType<CollectionsListSubscription>>(sub => {
       let disposed = false;

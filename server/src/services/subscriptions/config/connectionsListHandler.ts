@@ -2,9 +2,9 @@ import { ConnectionsUpdateCommand } from '@core/commands';
 import { SubscriptionDataType } from '@core/subscriptions';
 import { ConnectionsListSubscription } from '@core/subscriptions/configSubscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const connectionsListHandler: Handler<ConnectionsListSubscription> = (_, services) => {
+export const connectionsListHandler: OnceHandler<ConnectionsListSubscription> = (_, services) => {
 
    return new Observable<SubscriptionDataType<ConnectionsListSubscription>>(sub => {
 

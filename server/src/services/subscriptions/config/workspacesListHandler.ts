@@ -1,9 +1,9 @@
 import { WorkspacesUpdateCommand } from '@core/commands';
 import { WorkspacesListData, WorkspacesListSubscription } from '@core/subscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const workspacesListHandler: Handler<WorkspacesListSubscription> = (_, services) => {
+export const workspacesListHandler: OnceHandler<WorkspacesListSubscription> = (_, services) => {
 
    return new Observable<WorkspacesListData>(sub => {
 

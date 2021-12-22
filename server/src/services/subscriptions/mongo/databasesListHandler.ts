@@ -1,9 +1,9 @@
 import { getConnection } from '../..';
 import { DatabaseListData, DatabasesListSubscription, SubscriptionDataType } from '@core/subscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const databasesListHandler: Handler<DatabasesListSubscription> = (cmd, services) => {
+export const databasesListHandler: OnceHandler<DatabasesListSubscription> = (cmd, services) => {
 
    return new Observable<SubscriptionDataType<DatabasesListSubscription>>(sub => {
       let disposed = false;

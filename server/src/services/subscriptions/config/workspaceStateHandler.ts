@@ -2,9 +2,9 @@ import { WorkspaceStateUpdateCommand } from '@core/commands';
 import { SubscriptionDataType } from '@core/subscriptions';
 import { WorkspaceStateSubscription } from '@core/subscriptions/configSubscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const workspaceStateHandler: Handler<WorkspaceStateSubscription> = (cmd, services) => {
+export const workspaceStateHandler: OnceHandler<WorkspaceStateSubscription> = (cmd, services) => {
 
    return new Observable<SubscriptionDataType<WorkspaceStateSubscription>>(sub => {
 

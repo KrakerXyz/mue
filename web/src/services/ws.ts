@@ -46,9 +46,9 @@ export function useWs() {
 
    return {
       state: readonly(state),
-      subscribe<TSubscription extends Subscription>(data: TSubscription): Observable<SubscriptionDataType<TSubscription>> {
+      subscribe<TSubscription extends Subscription>(data: TSubscription, id?: string): Observable<SubscriptionDataType<TSubscription>> {
          const clientMessage: SubscriptionClientMessage = {
-            id: v4(),
+            id: id ?? v4(),
             data
          };
 

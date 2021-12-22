@@ -2,9 +2,9 @@ import { FavoritesUpdateCommand } from '@core/commands';
 import { defaultFavorites } from '@core/models';
 import { FavoritesData, FavoritesSubscription } from '@core/subscriptions';
 import Observable from 'zen-observable';
-import { Handler } from '..';
+import { OnceHandler } from '..';
 
-export const favoritesHandler: Handler<FavoritesSubscription> = (_, services) => {
+export const favoritesHandler: OnceHandler<FavoritesSubscription> = (_, services) => {
 
    return new Observable<FavoritesData>(sub => {
 

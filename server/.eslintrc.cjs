@@ -69,7 +69,7 @@ module.exports = {
 
       'max-depth': [
          'error',
-         3
+         4
       ],
 
       'quotes': [

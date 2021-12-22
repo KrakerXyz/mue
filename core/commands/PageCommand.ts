@@ -1,5 +1,5 @@
 
 export type UnsubscribeSubscriptionCommand = {
-   name: 'command.subscription.unsubscribe',
+   name: 'command.subscription.',
    id: string;
 }

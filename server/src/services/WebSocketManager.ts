@@ -1,4 +1,4 @@
-import { SubscriptionClientMessage, SubscriptionDataType, SubscriptionServerMessage } from '@core/subscriptions';
+import { SubscriptionClientMessage, SubscriptionServerMessage } from '@core/subscriptions';
 import { isSubscriptionClientMessage } from '@core/index';
 import { CommandClientMessage, CommandServerMessage } from '@core/commands';
 import { randomUUID } from 'crypto';
@@ -31,7 +31,13 @@ export class WebSocketManager {
 
                 if (connection.subscriptions.has(msg.id)) { throw new Error(`Subscription already present for id ${msg.id}`); }
 
-                const obs = subscriptionHandlers[msg.data.name](msg.data, connection.services);
+                const nextPage$ = new Observable<void>(sub => {
+                    const conSub = connection.subscriptions.get(msg.id);
+                    if (!conSub) { throw new Error('connection subscription does not exist'); }
+                    conSub.nextPageObserver = sub;
+                });
+
+                const obs = subscriptionHandlers[msg.data.name](msg.data, connection.services, nextPage$);
 
                 const sub = obs.subscribe(data => {
                     const serverMessage: SubscriptionServerMessage = {
@@ -48,7 +54,7 @@ export class WebSocketManager {
                     }));
                 });
 
-                connection.subscriptions.set(msg.id, { name: msg.data.name, observable: obs, subscription: sub });
+                connection.subscriptions.set(msg.id, { name: msg.data.name, subscription: sub, nextPageObserver: null });
 
             } else {
 
@@ -59,6 +65,18 @@ export class WebSocketManager {
                         connection.subscriptions.delete(msg.data.id);
                     }
                     return;
+                } else if (msg.data.name === 'command.subscription.nextPage') {
+                    const sub = connection.subscriptions.get(msg.data.id);
+                    if (!sub) {
+                        connection.socket.send(JSON.stringify({
+                            error: `subscription ${msg.data.id} does not exist`,
+                            command: msg
+                        }));
+                        return;
+                    }
+
+                    if (!sub.nextPageObserver) { throw new Error('sub does not implement next page'); }
+                    sub.nextPageObserver?.next();
                 }
 
                 const handler = commandHandlers[msg.data.name];
@@ -80,7 +98,10 @@ export class WebSocketManager {
 
         connection.socket.on('close', () => {
             log.info('WS connection closed');
-            connection.subscriptions.forEach(s => s.subscription.unsubscribe());
+            connection.subscriptions.forEach(s => {
+                s.subscription.unsubscribe();
+                s.nextPageObserver?.complete();
+            });
             connection.subscriptions.clear();
         });
 
@@ -92,5 +113,9 @@ export class WebSocketManager {
 interface Connection {
     socket: any;
     services: WorkspaceServices;
-    subscriptions: Map<string, { name: string, observable: Observable<SubscriptionDataType<any>>, subscription: ZenObservable.Subscription }>;
+    subscriptions: Map<string, {
+        name: string,
+        subscription: ZenObservable.Subscription,
+        nextPageObserver: ZenObservable.SubscriptionObserver<void> | null;
+    }>;
 }
