@@ -20,7 +20,10 @@
       props: {
          items: { type: Array, required: true },
       },
-      setup(props) {
+      emits: {
+         scrollIndex: (index: number) => !!index || true,
+      },
+      setup(props, { emit }) {
          const vms = computed(() => {
             return props.items.map<ItemVm>((i, index) => {
                return {
@@ -71,6 +74,7 @@
             resizeObserver.observe(inner);
          });
 
+         let lastScrollIndex = -1;
          onMounted(() => {
             if (!parent.value) {
                console.warn('Missing parent');
@@ -81,6 +85,16 @@
                'scroll',
                () => {
                   fit(vms.value, displayItems.value, parent.value!, overflow);
+                  const lastItemDiv = parent.value!.firstElementChild?.lastElementChild?.previousElementSibling as HTMLDivElement | undefined;
+                  if (!lastItemDiv) {
+                     return;
+                  }
+                  const itemIndex = parseInt(lastItemDiv.dataset.index ?? '-1');
+                  if (itemIndex === -1 || itemIndex === lastScrollIndex) {
+                     return;
+                  }
+                  emit('scrollIndex', itemIndex);
+                  lastScrollIndex = itemIndex;
                },
                { capture: true, passive: true }
             );

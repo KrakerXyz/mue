@@ -112,7 +112,7 @@
                   </button>
                </div>
             </div>
-            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace">
+            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace" @scroll-index="scrollIndexChange($event)">
                <template #default="slotProps">
                   <div class="list-group-item">
                      <div class="row g-1 align-items-center">
@@ -203,6 +203,8 @@
 
          const isRunning = ref(false);
          const results = ref<Record<string, any>[]>();
+         let isComplete = false;
+         let subId = '';
 
          const exec = () => {
             if (sub) {
@@ -218,15 +220,14 @@
                return;
             }
 
+            isComplete = false;
             results.value = undefined;
             isRunning.value = true;
+            subId = v4();
 
             const now = Date.now();
-            const subId = v4();
             const obs = ws.subscribe(parsed.value, subId);
-            const rawResults: Record<string, any>[] = markRaw([]);
-
-            let secondPageLoaded = false;
+            let rawResults: Record<string, any>[] = [];
 
             sub = obs.subscribe((d) => {
                for (const r of d.results) {
@@ -234,18 +235,34 @@
                }
                if (d.pageComplete) {
                   console.debug(`Finished page in ${Date.now() - now}ms with ${rawResults.length} records`);
-                  results.value = rawResults;
+                  results.value = markRaw([...(results.value ?? []), ...rawResults]);
+                  rawResults = [];
                   isRunning.value = false;
 
-                  if (!secondPageLoaded) {
-                     console.debug('Loading second page');
-                     secondPageLoaded = true;
-                     ws.command({
-                        id: subId,
-                        name: 'command.subscription.nextPage',
-                     });
-                  }
+                  isComplete = d.queryComplete;
                }
+            });
+         };
+
+         const scrollIndexChange = (index: number) => {
+            if (isComplete) {
+               return;
+            }
+            if (isRunning.value) {
+               return;
+            }
+            if (!results.value) {
+               return;
+            }
+            if (index < results.value.length - 5) {
+               return;
+            }
+
+            console.log('Loading next page');
+            isRunning.value = true;
+            ws.command({
+               name: 'command.subscription.nextPage',
+               id: subId,
             });
          };
 
@@ -292,7 +309,7 @@
             console.debug('Query.vue unmounted');
          });
 
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty, scrollIndexChange };
       },
    });
 </script>
