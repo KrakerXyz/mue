@@ -26,9 +26,7 @@ export class RpcService implements RpcServiceInterface {
             break;
          }
 
-         console.debug('yield record');
          yield d;
-         console.debug('yielded record');
       }
       console.debug('Cursor finished');
    }

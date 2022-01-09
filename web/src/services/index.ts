@@ -1,3 +1,4 @@
+
 export * from './ws';
 export * from './rpc';
 export * from './observables';
@@ -8,3 +9,4 @@ export * from './workspaces';
 export * from './favorites';
 export * from './ResultContextManager';
 export * from './EventEmitter';
+export * from './wrapRpcAsyncEnumerable';

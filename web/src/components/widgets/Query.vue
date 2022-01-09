@@ -10,7 +10,6 @@
                   <span class="fw-bold">
                      {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
                   </span>
-                  <span v-if="results?.length" class="ms-2 text-muted">{{ results.length }} result{{ results.length > 1 ? 's' : '' }}</span>
                </div>
                <div v-if="parsed">
                   <span class="text-muted small">{{ parsed.command }}(</span>
@@ -112,34 +111,37 @@
                   </button>
                </div>
             </div>
-            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace" @scroll-index="scrollIndexChange($event)">
-               <template #default="slotProps">
-                  <div class="list-group-item">
-                     <div class="row g-1 align-items-center">
-                        <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
-                        <div class="col overflow-hidden">
-                           <v-object-value
-                              :value="slotProps.item"
-                              :result-index="slotProps.index"
-                              :contextManager="contextManager"
-                              basePath=""
-                           ></v-object-value>
+
+            <template v-if="resultsGenerator">
+               <v-virtual-list-gen :items="resultsGenerator" class="overflow-auto list-group flex-grow-1 font-monospace">
+                  <template #default="slotProps">
+                     <div class="list-group-item pb-0">
+                        <div class="row g-1">
+                           <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
+                           <div class="col overflow-hidden">
+                              <v-object-value
+                                 :value="slotProps.item"
+                                 :result-index="slotProps.index"
+                                 :contextManager="contextManager"
+                                 basePath=""
+                              ></v-object-value>
+                           </div>
                         </div>
                      </div>
-                  </div>
-               </template>
-            </v-virtual-list>
+                  </template>
+               </v-virtual-list-gen>
+            </template>
          </div>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { ResultContextManager, useRpc, useWs, WidgetManager } from '@/services';
-   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch, nextTick } from 'vue';
+   import { ResultContextManager, useRpc, WidgetManager, wrapRpcAsyncEnumerable } from '@/services';
+   import { computed, defineComponent, markRaw, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
-   import { QueryWidgetResultContext, Widget, defaultResultContext, MongoQuery } from '@core/models';
+   import { QueryWidgetResultContext, Widget, defaultResultContext, MongoQuery, QueryRecord } from '@core/models';
 
    export default defineComponent({
       props: {
@@ -153,7 +155,6 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
          const rpc = useRpc();
 
          const queryString = ref<string>(props.query ?? `db.getCollection('${props.collection}').find({})`);
@@ -196,19 +197,11 @@
 
          const invalid = computed(() => !parsed.value);
 
-         // eslint-disable-next-line no-undef
-         let sub: ZenObservable.Subscription | null = null;
-
          const isRunning = ref(false);
-         const results = ref<Record<string, any>[]>();
-         let isComplete = false;
-         let subId = '';
+
+         const resultsGenerator = ref<AsyncGenerator<QueryRecord>>();
 
          const exec = async () => {
-            if (sub) {
-               sub.unsubscribe();
-               sub = null;
-            }
             if (!parsed.value) {
                return;
             }
@@ -218,51 +211,19 @@
                return;
             }
 
-            isComplete = false;
-            results.value = undefined;
             isRunning.value = true;
-            const now = Date.now();
 
             const thisParsed = parsed.value;
-            let rawResults: Record<string, any>[] = [];
 
-            console.log('Getting query iterator');
+            console.debug('Getting query iterator');
             const queryResult = await rpc.mongo().then((m) => m.query(thisParsed));
 
-            console.log('Iterating query results');
-            for await (let rec of queryResult) {
-               rawResults.push(rec);
-               if (rawResults.length === 20) {
-                  break;
-               }
-            }
+            const wrappedResult = markRaw(wrapRpcAsyncEnumerable(queryResult));
 
-            console.debug(`Finished page in ${Date.now() - now}ms with ${rawResults.length} records`);
-            results.value = markRaw([...(results.value ?? []), ...rawResults]);
-            rawResults = [];
+            console.debug('Iterator received');
+            resultsGenerator.value = wrappedResult;
+
             isRunning.value = false;
-         };
-
-         const scrollIndexChange = (index: number) => {
-            if (isComplete) {
-               return;
-            }
-            if (isRunning.value) {
-               return;
-            }
-            if (!results.value) {
-               return;
-            }
-            if (index < results.value.length - 5) {
-               return;
-            }
-
-            console.log('Loading next page');
-            isRunning.value = true;
-            ws.command({
-               name: 'command.subscription.nextPage',
-               id: subId,
-            });
          };
 
          const context: QueryWidgetResultContext = reactive({
@@ -294,21 +255,10 @@
          }
 
          const setContextProperty = async (prop: keyof QueryWidgetResultContext, value: any) => {
-            const tmpResults = results.value;
-            results.value = [];
-            await nextTick();
             (context as any)[prop] = value;
-
-            await nextTick();
-            results.value = tmpResults;
          };
 
-         onUnmounted(() => {
-            sub?.unsubscribe();
-            console.debug('Query.vue unmounted');
-         });
-
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty, scrollIndexChange };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, resultsGenerator, contextManager, setContextProperty };
       },
    });
 </script>
