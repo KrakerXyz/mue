@@ -1,5 +1,4 @@
-
-export * from './connectionsListHandler';
-export * from './workspaceStateHandler';
-export * from './workspacesListHandler';
-export * from './favoritesHandler';
+export * from './connectionsListHandler.js';
+export * from './workspaceStateHandler.js';
+export * from './workspacesListHandler.js';
+export * from './favoritesHandler.js';

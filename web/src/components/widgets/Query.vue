@@ -135,13 +135,11 @@
 </template>
 
 <script lang="ts">
-   import { ResultContextManager, useWs, WidgetManager } from '@/services';
-   import { Document, QuerySubscription } from '@core/subscriptions';
+   import { ResultContextManager, useRpc, useWs, WidgetManager } from '@/services';
    import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch, nextTick } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
-   import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
-   import { v4 } from 'uuid';
+   import { QueryWidgetResultContext, Widget, defaultResultContext, MongoQuery } from '@core/models';
 
    export default defineComponent({
       props: {
@@ -156,6 +154,7 @@
       },
       setup(props) {
          const ws = useWs();
+         const rpc = useRpc();
 
          const queryString = ref<string>(props.query ?? `db.getCollection('${props.collection}').find({})`);
 
@@ -174,8 +173,7 @@
                return undefined;
             }
 
-            const msg: QuerySubscription = {
-               name: 'subscription.mongo.query',
+            const msg: MongoQuery = {
                connection: props.connection,
                database: props.database,
                collection: match[1],
@@ -206,7 +204,7 @@
          let isComplete = false;
          let subId = '';
 
-         const exec = () => {
+         const exec = async () => {
             if (sub) {
                sub.unsubscribe();
                sub = null;
@@ -223,25 +221,26 @@
             isComplete = false;
             results.value = undefined;
             isRunning.value = true;
-            subId = v4();
-
             const now = Date.now();
-            const obs = ws.subscribe(parsed.value, subId);
+
+            const thisParsed = parsed.value;
             let rawResults: Record<string, any>[] = [];
 
-            sub = obs.subscribe((d) => {
-               for (const r of d.results) {
-                  rawResults.push(r);
-               }
-               if (d.pageComplete) {
-                  console.debug(`Finished page in ${Date.now() - now}ms with ${rawResults.length} records`);
-                  results.value = markRaw([...(results.value ?? []), ...rawResults]);
-                  rawResults = [];
-                  isRunning.value = false;
+            console.log('Getting query iterator');
+            const queryResult = await rpc.mongo().then((m) => m.query(thisParsed));
 
-                  isComplete = d.queryComplete;
+            console.log('Iterating query results');
+            for await (let rec of queryResult) {
+               rawResults.push(rec);
+               if (rawResults.length === 20) {
+                  break;
                }
-            });
+            }
+
+            console.debug(`Finished page in ${Date.now() - now}ms with ${rawResults.length} records`);
+            results.value = markRaw([...(results.value ?? []), ...rawResults]);
+            rawResults = [];
+            isRunning.value = false;
          };
 
          const scrollIndexChange = (index: number) => {

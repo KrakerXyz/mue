@@ -2,23 +2,24 @@ import { WorkspaceStateUpdateCommand } from '@core/commands';
 import { Widget, WidgetName, WidgetProps, WorkspaceState } from '@core/models';
 import { v4 } from 'uuid';
 import { reactive } from 'vue';
-import { useWs } from '.';
+import { useWs } from './index.js';
 
 export class WidgetManager {
-
    private readonly _ws = useWs();
    private readonly _widgets = reactive<Widget[]>([]);
 
-   public constructor(public readonly workspaceId: string) { }
+   public constructor(public readonly workspaceId: string) {}
 
-   public get widgets() { return this._widgets; }
+   public get widgets() {
+      return this._widgets;
+   }
 
    public add<TName extends WidgetName>(name: TName, props: WidgetProps<TName>) {
-
       const widget: Widget<TName> = {
          id: v4(),
          component: {
-            name, props
+            name,
+            props,
          },
          workspace: {
             maximized: false,
@@ -28,16 +29,17 @@ export class WidgetManager {
                height: '50%',
                width: '50%',
                zIndex: 0,
-            }
-         }
+            },
+         },
       };
-
 
       //The caller is probably coming from some click event which will mean it's bringToFront would get called after we return from here. As such, call a bringToFront on next tick so we override it
       setTimeout(() => {
          this._widgets.push(widget);
          this.bringToFront(widget);
-         if (!widget.workspace.maximized && this._widgets.some(w => w.workspace.maximized)) { this.toggleMaximized(widget); }
+         if (!widget.workspace.maximized && this._widgets.some((w) => w.workspace.maximized)) {
+            this.toggleMaximized(widget);
+         }
          this.saveState();
       });
    }
@@ -53,14 +55,18 @@ export class WidgetManager {
    };
 
    public updateProps<TName extends WidgetName>(w: Widget<TName>, props: Partial<WidgetProps<TName>>) {
-      if (!w.component.props) { w.component.props = {} as WidgetProps<TName>; }
+      if (!w.component.props) {
+         w.component.props = {} as WidgetProps<TName>;
+      }
       Object.assign(w.component.props, props);
       this.saveState();
    }
 
    public bringToFront(w: Widget) {
       const maxIndex = this._widgets.reduce((p, c) => Math.max(p, c.workspace.style.zIndex), 0);
-      if (maxIndex && maxIndex === w.workspace.style.zIndex) { return; }
+      if (maxIndex && maxIndex === w.workspace.style.zIndex) {
+         return;
+      }
       w.workspace.style.zIndex = maxIndex + 1;
       const sorted = [...this._widgets].sort((a, b) => a.workspace.style.zIndex - b.workspace.style.zIndex);
       for (let i = 0; i < sorted.length; i++) {
@@ -75,10 +81,12 @@ export class WidgetManager {
       this.saveState();
    }
 
-   public readonly setPosition = (w: Widget, rect: { left?: number, top?: number, width?: number, height?: number }) => {
-      Object.getOwnPropertyNames(rect).map(p => {
+   public readonly setPosition = (w: Widget, rect: { left?: number; top?: number; width?: number; height?: number }) => {
+      Object.getOwnPropertyNames(rect).map((p) => {
          const v = (rect as any)[p];
-         if (v === undefined) { return; }
+         if (v === undefined) {
+            return;
+         }
          const css = `${v}px`;
          (w.workspace.style as any)[p] = css;
       });
@@ -90,8 +98,14 @@ export class WidgetManager {
       this._widgets.push(...state.widgets);
       let updated = false;
       for (const w of this._widgets) {
-         if (!w.workspace.style.width) { w.workspace.style.width = '50%'; updated = true; }
-         if (!w.workspace.style.height) { w.workspace.style.height = '50%'; updated = true; }
+         if (!w.workspace.style.width) {
+            w.workspace.style.width = '50%';
+            updated = true;
+         }
+         if (!w.workspace.style.height) {
+            w.workspace.style.height = '50%';
+            updated = true;
+         }
       }
       if (updated) {
          this.saveState();
@@ -116,6 +130,4 @@ export class WidgetManager {
          this._ws.command(cmd);
       }, 500);
    }
-
-
 }

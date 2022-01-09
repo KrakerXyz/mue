@@ -1,5 +1,4 @@
-
-export * from './WebSocketManager';
-export * from './config';
-export * from './mongo';
-export * from './WorkspaceServices';
+export * from './WebSocketManager.js';
+export * from './config.js';
+export * from './mongo/index.js';
+export * from './WorkspaceServices.js';

@@ -9,7 +9,6 @@
 
 <script lang="ts">
    import { toPromise, useConnections, useSelectedWorkspaceId, useWorkspaces, useWs, WidgetManager } from '@/services';
-   import { ReadStream } from 'fs';
    import { v4 } from 'uuid';
    import { computed, defineComponent, ref, watch } from 'vue';
    import HeaderVue from './header/Header.vue';
@@ -26,28 +25,6 @@
          const selectedWorkspaceId = useSelectedWorkspaceId();
          const selectedWorkspace = computed(() => workspaces.value?.find((ws) => ws.id === selectedWorkspaceId.value));
          const manager = ref<WidgetManager>();
-
-         console.log('Starting fetch');
-         fetch('/api/test').then(async (res) => {
-            const reader = res.body?.getReader();
-            if (!reader) {
-               console.log('Empty body');
-               return;
-            }
-            const decoder = new TextDecoder();
-            let readResult = await reader.read();
-            while (!readResult.done) {
-               const chunk = decoder.decode(readResult.value);
-
-               console.log('chunk', chunk);
-
-               await new Promise((r) => setTimeout(r, 5000));
-
-               readResult = await reader.read();
-            }
-
-            console.log('Read done');
-         });
 
          watch(
             [selectedWorkspace, workspaces],

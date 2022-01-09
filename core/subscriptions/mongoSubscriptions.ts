@@ -18,30 +18,11 @@ export type CollectionsListSubscription = {
 
 export type CollectionListData = { connection: string, database: string, collections: Collection[] };
 
-export type QuerySubscription<TCommand extends 'find' | 'aggregate' = 'find' | 'aggregate'> = {
-   name: 'subscription.mongo.query',
-   connection: string;
-   database: string;
-   collection: string;
-   command: TCommand
-   query: TCommand extends 'find' ? Document : Document[]
-}
-
-export type QueryData = {
-   connection: string;
-   results: Record<string, any>[];
-   page: number;
-   queryComplete: boolean;
-   pageComplete: boolean;
-}
-
-export type MongoSubscription = DatabasesListSubscription | CollectionsListSubscription | QuerySubscription;
+export type MongoSubscription = DatabasesListSubscription | CollectionsListSubscription;
 
 export type MongoSubscriptionDataType<TSubscription extends MongoSubscription> =
    TSubscription extends DatabasesListSubscription
    ? DatabaseListData
    : TSubscription extends CollectionsListSubscription
    ? CollectionListData
-   : TSubscription extends QuerySubscription
-   ? QueryData
    : never;

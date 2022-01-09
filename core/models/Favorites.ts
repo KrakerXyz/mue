@@ -1,15 +1,15 @@
-import { deepFreeze } from '@core/util';
+import { deepFreeze } from "../../core/util/index.js";
 
 export interface Favorites {
-   collections: CollectionFavorite[];
+  collections: CollectionFavorite[];
 }
 
 export const defaultFavorites: Favorites = deepFreeze({
-   collections: []
+  collections: [],
 });
 
 export interface CollectionFavorite {
-   name: string;
-   database: string;
-   connection: string;
+  name: string;
+  database: string;
+  connection: string;
 }

@@ -1,3 +1,2 @@
-export * from './databasesListHandler';
-export * from './queryHandler';
-export * from './collectionsListHandler';
+export * from './databasesListHandler.js';
+export * from './collectionsListHandler.js';

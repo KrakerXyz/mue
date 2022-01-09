@@ -6,14 +6,11 @@
     "name": "Josh Kraker",
     "email": "joshkrak@gmail.com"
   },
-  "type": "commonjs",
+  "type": "module",
   "main": "./dist/server/src/index.js",
   "files": [
     "dist/"
   ],
-  "_moduleAliases": {
-    "@core": "dist/core"
-  },
   "license": "MIT",
   "scripts": {
     "clean": "rimraf ./dist/*",
@@ -32,8 +29,8 @@
     "fastify-static": "^4.2.3",
     "fastify-websocket": "^4",
     "level": "^7.0.1",
-    "module-alias": "^2.2.2",
     "mongodb": "^4.2.1",
+    "rpc-thing": "file:../../rpc-thing",
     "tslib": "^2.3.1",
     "uuid": "^8.3.2",
     "zen-observable": "^0.8.15"

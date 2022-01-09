@@ -1,9 +1,7 @@
 import { Db, DbNamespace } from './Db';
-import { Connection } from '@core/models/Connection';
-import { Favorites, Workspace, WorkspaceState } from '@core/models';
+import { Favorites, Workspace, WorkspaceState, Connection } from '../../../core/models/index.js';
 
 export class Config {
-
    private readonly _ns: DbNamespace;
    private readonly _nsWorkspaces: DbNamespace;
 
@@ -18,11 +16,10 @@ export class Config {
       },
       update: (connections: Connection[]) => {
          return this._ns.put('connections', connections);
-      }
+      },
    };
 
    public readonly workspaces = {
-
       list: () => {
          return this._nsWorkspaces.get('') as Promise<Workspace[] | null>;
       },
@@ -36,9 +33,8 @@ export class Config {
          },
          update: (id: string, workspaceState: WorkspaceState) => {
             return this._nsWorkspaces.createNamespace('state').put(id, workspaceState);
-         }
-      }
-
+         },
+      },
    };
 
    public readonly favorites = {
@@ -47,7 +43,6 @@ export class Config {
       },
       update: (favorites: Favorites) => {
          return this._ns.put('favorites', favorites);
-      }
+      },
    };
-
 }

@@ -1,5 +1,4 @@
-
-import { ConnectionString } from '@core/models';
+import { ConnectionString } from '../../../../core/models/index.js';
 import { MongoClient } from 'mongodb';
 
 export async function getConnection(connectionString: ConnectionString) {

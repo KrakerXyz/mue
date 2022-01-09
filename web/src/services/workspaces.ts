@@ -1,29 +1,33 @@
 import { Workspace } from '@core/models';
 import { computed, ref, Ref } from 'vue';
-import { useWs } from '.';
+import { useWs } from './index.js';
 
 let r: Ref<Workspace[] | undefined> | undefined;
 
 export function useWorkspaces(): Ref<Workspace[] | undefined> {
-
-   if (r) { return r; }
+   if (r) {
+      return r;
+   }
 
    const thisR = (r = ref<Workspace[]>());
 
    const ws = useWs();
-   ws.subscribe({ name: 'subscription.config.workspaces.list' }).subscribe(wss => thisR.value = wss.workspaces);
+   ws.subscribe({ name: 'subscription.config.workspaces.list' }).subscribe((wss) => (thisR.value = wss.workspaces));
 
    return r;
-
 }
 
 const windowLocation = ref<string>();
 const setWindowLocation = () => {
    windowLocation.value = window.location.pathname.split('/')[1];
 };
-window.addEventListener('popstate', () => {
-   setWindowLocation();
-}, { passive: true, capture: true });
+window.addEventListener(
+   'popstate',
+   () => {
+      setWindowLocation();
+   },
+   { passive: true, capture: true }
+);
 setWindowLocation();
 
 export function useSelectedWorkspaceId(): Ref<string | undefined> {
@@ -34,7 +38,7 @@ export function useSelectedWorkspaceId(): Ref<string | undefined> {
       set(value: string | undefined) {
          window.history.replaceState({}, 'mue', `/${value}`);
          setWindowLocation();
-      }
+      },
    });
    return r;
 }
