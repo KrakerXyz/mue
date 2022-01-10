@@ -113,7 +113,7 @@
             </div>
 
             <template v-if="resultsGenerator">
-               <v-virtual-list-gen :items="resultsGenerator" class="overflow-auto list-group flex-grow-1 font-monospace">
+               <v-virtual-list-gen :items="resultsGenerator" class="overflow-auto list-group flex-grow-1 font-monospace" :beginUpdate="beginUpdate">
                   <template #default="slotProps">
                      <div class="list-group-item pb-0">
                         <div class="row g-1">
@@ -138,7 +138,7 @@
 
 <script lang="ts">
    import { ResultContextManager, useRpc, WidgetManager, wrapRpcAsyncEnumerable } from '@/services';
-   import { computed, defineComponent, markRaw, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, markRaw, nextTick, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
    import { QueryWidgetResultContext, Widget, defaultResultContext, MongoQuery, QueryRecord } from '@core/models';
@@ -242,10 +242,17 @@
             context.hidePaths.splice(index, 1);
          };
 
+         /** Passed into v list to tell it to de-render all items before a large change to the template */
+         const beginUpdate = ref(false);
+
          watch(
             context,
-            (c) => {
+            async (c) => {
+               beginUpdate.value = true;
+               await nextTick();
                props.widgetManager.updateProps<'query'>(props.widget, { resultContext: c });
+               await nextTick();
+               beginUpdate.value = false;
             },
             { deep: true }
          );
@@ -258,7 +265,7 @@
             (context as any)[prop] = value;
          };
 
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, resultsGenerator, contextManager, setContextProperty };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, resultsGenerator, contextManager, setContextProperty, beginUpdate };
       },
    });
 </script>

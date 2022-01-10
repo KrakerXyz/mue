@@ -1,29 +1,28 @@
 <template>
-   <div ref="outerWrapper">
-      <div ref="innerWrapper">
+   <div ref="outerWrapperRef">
+      <div ref="innerWrapperRef" v-if="!beginUpdate">
          <!-- min-height is intentional here. I tried with height but it doesn't haven an effect on the scroll -->
-         <div ref="topSpacer" :style="{ 'min-height': `${overflow.top}px` }"></div>
-         <div v-for="item of displayItems" :key="item.index" :data-index="item.index">
+         <div ref="topSpacerRef" :style="{ 'min-height': `${overflow.top}px` }"></div>
+         <div v-for="item of displayItems" :key="item.index" :data-index="item.index" :ref="e => item.el = e as HTMLElement">
             <slot :item="item.item" :index="item.index"></slot>
          </div>
-         <div ref="bottomSpacer" :style="{ 'min-height': `${overflow.bottom}px` }"></div>
+         <div ref="bottomSpacerRef" :style="{ 'min-height': `${overflow.bottom}px` }"></div>
       </div>
    </div>
 </template>
 
 <script lang="ts">
-   import { defineComponent, markRaw, nextTick, onMounted, onUnmounted, reactive, Ref, ref, watch } from 'vue';
+   import { defineComponent, markRaw, nextTick, onUnmounted, reactive, Ref, ref, watch } from 'vue';
 
    export default defineComponent({
       props: {
          items: { type: Object as () => AsyncGenerator<any>, required: true },
+         beginUpdate: { type: Boolean, default: false },
       },
       setup(props) {
          const loadPosition = ref<number | 'done'>(1);
          const rawItems = reactive<ItemVm[]>([]);
          let enumDone = false;
-
-         let runFit: () => Promise<void> = () => Promise.resolve();
 
          let running = false;
          watch(
@@ -56,12 +55,10 @@
 
          const displayItems = reactive<ItemVm[]>([]);
 
-         const outerWrapper = ref<HTMLDivElement | undefined>();
-         const innerWrapper = ref<HTMLDivElement | undefined>();
-         const topSpacer = ref<HTMLDivElement | undefined>();
-         const bottomSpacer = ref<HTMLDivElement | undefined>();
-
-         let resizeObserver: ResizeObserver | null = null;
+         const outerWrapperRef = ref<HTMLDivElement | undefined>();
+         const innerWrapperRef = ref<HTMLDivElement | undefined>();
+         const topSpacerRef = ref<HTMLDivElement | undefined>();
+         const bottomSpacerRef = ref<HTMLDivElement | undefined>();
 
          const overflow = reactive<Overflow>({
             top: 0,
@@ -69,24 +66,32 @@
             bottom: 10,
          });
 
-         onMounted(() => {
-            if (!outerWrapper.value || !innerWrapper.value || !topSpacer.value || !bottomSpacer.value) {
-               console.error('Missing ref');
+         let runFit: () => Promise<void> = async () => {
+            if (!outerWrapperRef.value || !innerWrapperRef.value || !topSpacerRef.value || !bottomSpacerRef.value) {
                return;
             }
-            const outerWrapperDiv = outerWrapper.value;
-            const bottomSpacerDiv = bottomSpacer.value;
-            runFit = async () => {
-               await fit2(rawItems, displayItems, loadPosition, outerWrapperDiv, bottomSpacerDiv);
-            };
+            await fit2(rawItems, displayItems, loadPosition, outerWrapperRef.value, bottomSpacerRef.value, overflow);
+         };
 
+         let resizeObserver: ResizeObserver | null = null;
+         watch(innerWrapperRef, (div) => {
+            resizeObserver?.disconnect();
+            resizeObserver = null;
+            if (!div) {
+               return;
+            }
             resizeObserver = new ResizeObserver(async () => {
                console.debug('Resize triggered');
                runFit();
             });
-            resizeObserver.observe(innerWrapper.value);
+            resizeObserver.observe(div);
+         });
 
-            outerWrapperDiv.addEventListener(
+         watch(outerWrapperRef, (div) => {
+            if (!div) {
+               return;
+            }
+            div.addEventListener(
                'scroll',
                () => {
                   runFit();
@@ -100,7 +105,7 @@
             resizeObserver?.disconnect();
          });
 
-         return { displayItems, outerWrapper, innerWrapper, topSpacer, bottomSpacer, overflow };
+         return { displayItems, outerWrapperRef, innerWrapperRef, topSpacerRef, bottomSpacerRef, overflow };
       },
    });
 
@@ -109,14 +114,57 @@
       displayItems: ItemVm[],
       loadPosition: Ref<number | 'done'>,
       outerWrapper: HTMLDivElement,
-      bottomSpacer: HTMLDivElement
+      bottomSpacer: HTMLDivElement,
+      overflow: Overflow
    ) {
-      while (displayItems.length < rawItems.length && bottomSpacer.offsetTop - outerWrapper.offsetTop - outerWrapper.scrollTop < outerWrapper.clientHeight) {
-         displayItems.push(rawItems[displayItems.length]);
-         await nextTick();
+      let remTopCount = 0;
+      for (const di of displayItems) {
+         if (!di.el) {
+            break;
+         }
+         const clientBottom = di.el.offsetTop + di.el.clientHeight - outerWrapper.offsetTop - outerWrapper.scrollTop;
+         if (clientBottom > 0) {
+            break;
+         }
+         overflow.top += di.el.clientHeight;
+         overflow.offsetIndex++;
+         remTopCount++;
       }
 
-      if (loadPosition.value !== 'done' && loadPosition.value === displayItems.length && displayItems.length === rawItems.length) {
+      if (remTopCount) {
+         displayItems.splice(0, remTopCount);
+         console.debug(`Removed ${remTopCount} items from top`);
+         return;
+      }
+
+      let remBottomCount = 0;
+      for (let i = displayItems.length - 1; i > -1; i--) {
+         const di = displayItems[i];
+         if (!di.el) {
+            continue;
+         }
+         const clientTop = di.el.offsetTop - outerWrapper.offsetTop - outerWrapper.scrollTop;
+         if (clientTop < outerWrapper.clientHeight) {
+            break;
+         }
+         overflow.bottom += di.el.clientHeight;
+         remBottomCount++;
+      }
+
+      if (remBottomCount) {
+         displayItems.splice(displayItems.length - remBottomCount, remBottomCount);
+         console.debug(`Removed ${remBottomCount} items from bottom`);
+         return;
+      }
+
+      if (
+         overflow.offsetIndex + displayItems.length < rawItems.length &&
+         bottomSpacer.offsetTop - outerWrapper.offsetTop - outerWrapper.scrollTop < outerWrapper.clientHeight
+      ) {
+         displayItems.push(rawItems[displayItems.length + overflow.offsetIndex]);
+      }
+
+      if (loadPosition.value !== 'done' && loadPosition.value === displayItems.length + overflow.offsetIndex) {
          loadPosition.value++;
       }
    }
@@ -202,6 +250,8 @@
    interface ItemVm {
       index: number;
       item: any;
+      /** To be set by vue in the html */
+      el?: HTMLElement | undefined;
    }
 
    interface Overflow {
