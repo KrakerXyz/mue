@@ -6,14 +6,15 @@
          <div v-for="item of displayItems" :key="item.index" :data-index="item.index" :ref="e => item.el = e as HTMLElement">
             <slot :item="item.item" :index="item.index"></slot>
          </div>
-         <div ref="bottomSpacerRef" :style="{ 'min-height': `${overflow.bottom}px` }"></div>
+         <div ref="bottomSpacerRef" :style="{ 'min-height': `${Math.max(overflow.bottom, 10)}px` }"></div>
       </div>
    </div>
 </template>
 
 <script lang="ts">
-   import { defineComponent, markRaw, nextTick, onUnmounted, reactive, Ref, ref, watch } from 'vue';
+   import { defineComponent, markRaw, onUnmounted, reactive, Ref, ref, watch, nextTick } from 'vue';
 
+   const verbose = false;
    export default defineComponent({
       props: {
          items: { type: Object as () => AsyncGenerator<any>, required: true },
@@ -64,6 +65,8 @@
             top: 0,
             offsetIndex: 0,
             bottom: 10,
+            topInView: false,
+            bottomInView: false,
          });
 
          let runFit: () => Promise<void> = async () => {
@@ -74,14 +77,24 @@
          };
 
          let resizeObserver: ResizeObserver | null = null;
-         watch(innerWrapperRef, (div) => {
+         watch(outerWrapperRef, (div) => {
             resizeObserver?.disconnect();
             resizeObserver = null;
             if (!div) {
                return;
             }
+            let lastSize = 0;
             resizeObserver = new ResizeObserver(async () => {
-               console.debug('Resize triggered');
+               if (!outerWrapperRef.value) {
+                  return;
+               }
+               if (outerWrapperRef.value.offsetHeight === lastSize) {
+                  return;
+               }
+               lastSize = outerWrapperRef.value.offsetHeight;
+               if (verbose) {
+                  console.debug('Resize triggered');
+               }
                runFit();
             });
             resizeObserver.observe(div);
@@ -100,9 +113,42 @@
             );
          });
 
+         let intersectionObserver: IntersectionObserver | null = null;
+         watch([outerWrapperRef, topSpacerRef, bottomSpacerRef], (els) => {
+            intersectionObserver?.disconnect();
+            intersectionObserver = null;
+            const [outer, top, bottom] = els;
+            if (!outer || !top || !bottom) {
+               return;
+            }
+
+            intersectionObserver = new IntersectionObserver(
+               (changes) => {
+                  for (const c of changes) {
+                     if (c.target === top) {
+                        overflow.topInView = c.isIntersecting;
+                     } else if (c.target === bottom) {
+                        overflow.bottomInView = c.isIntersecting;
+                     }
+                  }
+                  if (overflow.topInView || overflow.bottomInView) {
+                     runFit();
+                  }
+               },
+               {
+                  root: outer,
+                  threshold: 0,
+               }
+            );
+
+            intersectionObserver.observe(top);
+            intersectionObserver.observe(bottom);
+         });
+
          onUnmounted(() => {
             console.debug('VirtualList unmounted');
             resizeObserver?.disconnect();
+            intersectionObserver?.disconnect();
          });
 
          return { displayItems, outerWrapperRef, innerWrapperRef, topSpacerRef, bottomSpacerRef, overflow };
@@ -114,29 +160,33 @@
       displayItems: ItemVm[],
       loadPosition: Ref<number | 'done'>,
       outerWrapper: HTMLDivElement,
-      bottomSpacer: HTMLDivElement,
+      bottomSpacer: HTMLElement,
       overflow: Overflow
    ) {
+      //Start from the top of the display items and remove any where the bottom edge is off screen
       let remTopCount = 0;
       for (const di of displayItems) {
          if (!di.el) {
             break;
          }
-         const clientBottom = di.el.offsetTop + di.el.clientHeight - outerWrapper.offsetTop - outerWrapper.scrollTop;
-         if (clientBottom > 0) {
+         const clientBottom = di.el.offsetTop + di.el.offsetHeight - outerWrapper.offsetTop - outerWrapper.scrollTop;
+         if (clientBottom > -5) {
             break;
          }
-         overflow.top += di.el.clientHeight;
+         overflow.top += di.el.offsetHeight;
          overflow.offsetIndex++;
          remTopCount++;
       }
 
       if (remTopCount) {
          displayItems.splice(0, remTopCount);
-         console.debug(`Removed ${remTopCount} items from top`);
+         if (verbose) {
+            console.debug(`Removed ${remTopCount} items from top`);
+         }
          return;
       }
 
+      //Check for any display items where the top edge is off screen and remove them
       let remBottomCount = 0;
       for (let i = displayItems.length - 1; i > -1; i--) {
          const di = displayItems[i];
@@ -144,107 +194,51 @@
             continue;
          }
          const clientTop = di.el.offsetTop - outerWrapper.offsetTop - outerWrapper.scrollTop;
-         if (clientTop < outerWrapper.clientHeight) {
+         if (clientTop < outerWrapper.offsetHeight) {
             break;
          }
-         overflow.bottom += di.el.clientHeight;
+         overflow.bottom += di.el.offsetHeight;
          remBottomCount++;
       }
 
       if (remBottomCount) {
          displayItems.splice(displayItems.length - remBottomCount, remBottomCount);
-         console.debug(`Removed ${remBottomCount} items from bottom`);
+         if (verbose) {
+            console.debug(`Removed ${remBottomCount} items from bottom`);
+         }
          return;
       }
 
-      if (
-         overflow.offsetIndex + displayItems.length < rawItems.length &&
-         bottomSpacer.offsetTop - outerWrapper.offsetTop - outerWrapper.scrollTop < outerWrapper.clientHeight
-      ) {
-         displayItems.push(rawItems[displayItems.length + overflow.offsetIndex]);
+      //If top space is in view, add a item to the top if we have one
+      if (overflow.topInView && overflow.offsetIndex) {
+         const toAdd = rawItems[overflow.offsetIndex - 1];
+         displayItems.splice(0, 0, toAdd);
+         overflow.offsetIndex--;
+         if (overflow.top) {
+            await nextTick();
+            overflow.top -= toAdd.el?.offsetHeight ?? 0;
+            if (overflow.top < 0) {
+               overflow.top = 0;
+            }
+         }
+      }
+
+      //If the top edge of the bottom space is visible, add more items to the end
+      if (overflow.bottomInView && overflow.offsetIndex + displayItems.length < rawItems.length) {
+         const toAdd = rawItems[displayItems.length + overflow.offsetIndex];
+         displayItems.push(toAdd);
+         if (overflow.bottom) {
+            await nextTick();
+            overflow.bottom -= toAdd.el?.offsetHeight ?? 0;
+            if (overflow.bottom < 0) {
+               overflow.bottom = 0;
+            }
+         }
       }
 
       if (loadPosition.value !== 'done' && loadPosition.value === displayItems.length + overflow.offsetIndex) {
          loadPosition.value++;
       }
-   }
-
-   let lastScrollPosition = -1;
-   async function _fit(srcItems: ItemVm[], displayItems: ItemVm[], parentWrapper: HTMLDivElement, overflow: Overflow): Promise<void> {
-      if (parentWrapper.scrollTop >= lastScrollPosition) {
-         let item = parentWrapper.firstElementChild?.firstElementChild?.nextElementSibling as HTMLElement;
-         let outOfViewElementsCount = 0;
-         let outOfViewElementHeight = 0;
-         while (item) {
-            const inView = item.offsetTop - parentWrapper.offsetTop + item.offsetHeight - parentWrapper.scrollTop;
-            if (inView > 0) {
-               break;
-            }
-
-            outOfViewElementsCount++;
-            outOfViewElementHeight += item.offsetHeight;
-            item = item?.nextElementSibling as HTMLElement;
-         }
-
-         if (outOfViewElementHeight) {
-            displayItems.splice(0, outOfViewElementsCount);
-            overflow.top += outOfViewElementHeight + outOfViewElementsCount * 1;
-            overflow.offsetIndex += outOfViewElementsCount;
-            console.debug(`Removed ${outOfViewElementsCount} items from top`);
-            await nextTick();
-         }
-
-         const origDisplayLen = displayItems.length;
-         while (
-            parentWrapper.clientHeight >= parentWrapper.scrollHeight - parentWrapper.scrollTop - overflow.bottom &&
-            displayItems.length + overflow.offsetIndex < srcItems.length
-         ) {
-            const vm = srcItems[displayItems.length + overflow.offsetIndex];
-            displayItems.push(vm);
-            await nextTick();
-         }
-
-         const newItemsLen = displayItems.length - origDisplayLen;
-         if (newItemsLen) {
-            console.debug(`Added ${newItemsLen} items to bottom`);
-         }
-
-         const avgHeight = parentWrapper.clientHeight / displayItems.length;
-         const remainingRecords = srcItems.length - displayItems.length - overflow.offsetIndex;
-         overflow.bottom = remainingRecords * avgHeight;
-      } else {
-         const topDummy = parentWrapper.firstElementChild?.firstElementChild as HTMLElement;
-         let addedTop = 0;
-         while (overflow.offsetIndex && topDummy.offsetHeight > parentWrapper.scrollTop) {
-            const vm = srcItems[overflow.offsetIndex - 1];
-            displayItems.splice(0, 0, vm);
-            await nextTick();
-            const newHeight = (parentWrapper.firstElementChild?.firstElementChild?.nextElementSibling as HTMLElement).offsetHeight;
-            overflow.offsetIndex--;
-            overflow.top = overflow.offsetIndex ? Math.max(overflow.top - newHeight, 0) : 0;
-            addedTop++;
-            await nextTick();
-         }
-
-         if (addedTop) {
-            console.debug(`Added ${addedTop} items to top`);
-         }
-      }
-
-      let lastItem = parentWrapper.firstElementChild?.lastElementChild?.previousElementSibling as HTMLElement;
-      let removedBottom = 0;
-      while (lastItem && lastItem.offsetTop - parentWrapper.scrollTop > parentWrapper.offsetHeight + parentWrapper.offsetTop) {
-         overflow.bottom += lastItem.offsetHeight;
-         displayItems.splice(displayItems.length - 1, 1);
-         removedBottom++;
-         lastItem = lastItem.previousElementSibling as HTMLElement;
-      }
-
-      if (removedBottom) {
-         console.debug(`Removed ${removedBottom} items from bottom`);
-      }
-
-      lastScrollPosition = parentWrapper.scrollTop;
    }
 
    interface ItemVm {
@@ -259,5 +253,7 @@
       /** The number of elements that are offscreen on the top and have been de-rendered */
       offsetIndex: number;
       bottom: number;
+      topInView: boolean;
+      bottomInView: boolean;
    }
 </script>

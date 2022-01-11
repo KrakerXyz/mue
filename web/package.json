@@ -39,7 +39,7 @@
     "vite": "^2.3.7",
     "vite-plugin-comlink": "^2.1.0",
     "vite-plugin-worker": "^1.0.4",
-    "vue-tsc": "^0.29"
+    "vue-tsc": "^0.30.2"
   },
   "keywords": [],
   "description": ""
