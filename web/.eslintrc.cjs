@@ -144,7 +144,7 @@ module.exports = {
       'complexity': [
          //https://eslint.org/docs/rules/complexity
          'warn',
-         25
+         30
       ],
 
       'indent': [
