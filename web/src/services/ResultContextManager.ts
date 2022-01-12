@@ -59,7 +59,7 @@ export class ResultContextManager {
 
    private getObjectSummary(value: Record<string, any>, path: string, maxLength: number): string {
       let json = '{';
-      const props = Object.getOwnPropertyNames(value);
+      const props = Object.keys(value);
       if (this.context.sortFields) {
          props.sort((a, b) => a.localeCompare(b));
       }

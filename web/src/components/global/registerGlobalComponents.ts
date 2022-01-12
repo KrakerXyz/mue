@@ -7,8 +7,7 @@ import SpinnerVue from './Spinner.vue';
 import WidgetTemplateVue from './WidgetTemplate.vue';
 import { valueVues } from './query-values';
 import ConnectionBadgeVue from './ConnectionBadge.vue';
-import VirtualListVue from './VirtualList.vue';
-import VirtualListGenVue from './VirtualListGen.vue';
+import AsyncListVue from './AsyncList.vue';
 
 export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-spinner', SpinnerVue);
@@ -17,8 +16,7 @@ export function registerGlobalComponents(vueApp: App) {
    vueApp.component('v-created', CreatedVue);
    vueApp.component('v-widget-template', WidgetTemplateVue);
    vueApp.component('v-connection-badge', ConnectionBadgeVue);
-   vueApp.component('v-virtual-list', VirtualListVue);
-   vueApp.component('v-virtual-list-gen', VirtualListGenVue);
+   vueApp.component('v-async-list', AsyncListVue);
 
    vueApp.directive('resizable', resizableDirective);
 

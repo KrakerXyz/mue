@@ -49,7 +49,7 @@
          const fields = computed(() => {
             const vms: FieldVm[] = [];
 
-            const fieldNames = Object.getOwnPropertyNames(props.value);
+            const fieldNames = Object.keys(props.value);
             if (props.contextManager.context.sortFields) {
                fieldNames.sort((a, b) => a.localeCompare(b));
             }
