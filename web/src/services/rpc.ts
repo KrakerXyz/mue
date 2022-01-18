@@ -12,6 +12,7 @@ export function useRpc(): PromisfiedService<RpcService> {
 
    const transport = createTransport();
    const serializer = new DefaultSerializer<RpcService>(transport, {} as any);
+   serializer.verboseLogging = true;
 
    thing = new RpcThing<RpcService>(serializer);
 

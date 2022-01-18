@@ -47,6 +47,10 @@ module.exports = {
          'off'
       ],
 
+      'brace-style': [
+         'error'
+      ],
+
       'max-lines': [
          //I've never used this before but like the idea of it. Lets see how restrictive or helpful it is and then discuss it. Since vue files have html and code, I could easily see this being too restrictive
          //Actually, I think this might only look at .ts files base on vue having their own max-len (line length). Lets just see how it goes

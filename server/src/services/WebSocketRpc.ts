@@ -19,6 +19,7 @@ export class WebsocketRpc {
          },
       };
       const serializer = new DefaultSerializer(transport, rpcService);
+      serializer.verboseLogging = true;
 
       socketStream.socket.on('message', async (buf: Buffer) => {
          const msg: RpcTransportMessage = JSON.parse(buf.toString());

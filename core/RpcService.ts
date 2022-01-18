@@ -1,7 +1,7 @@
-import type { QueryRecord, MongoQuery } from './models/MongoQuery';
+import { Connection } from "./models";
+import type { QueryRecord, MongoQuery } from "./models/MongoQuery";
 
 export interface RpcService {
-   mongo: {
-      query(query: MongoQuery): AsyncGenerator<QueryRecord>
-   }
+  configConnectionList(): AsyncGenerator<Connection>;
+  mongoQuery(query: MongoQuery): AsyncGenerator<QueryRecord>;
 }

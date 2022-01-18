@@ -7,7 +7,7 @@
 </template>
 
 <script lang="ts">
-   import { computed, defineComponent, markRaw, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch } from 'vue';
 
    export default defineComponent({
       props: {
@@ -46,6 +46,10 @@
          );
 
          const displayItems = computed(() => rawItems);
+
+         onUnmounted(() => {
+            props.items.return(null);
+         });
 
          return { displayItems };
       },

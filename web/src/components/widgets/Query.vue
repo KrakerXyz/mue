@@ -66,7 +66,7 @@
                      <label class="form-check-label" for="hide-empty">Hide Empty</label>
                   </div>
                </div>
-               <div class="col-auto">
+               <!-- <div class="col-auto">
                   <div class="form-check">
                      <input
                         class="form-check-input"
@@ -77,7 +77,7 @@
                      />
                      <label class="form-check-label" for="expand-all">Expand All</label>
                   </div>
-               </div>
+               </div> -->
                <div class="col-auto" v-if="context.hidePaths.length">
                   <div class="hidden-paths position-relative">
                      <span><i class="fal fa-eye"></i> {{ context.hidePaths.length }} hidden paths</span>
@@ -216,7 +216,7 @@
             const thisParsed = parsed.value;
 
             console.debug('Getting query iterator');
-            const queryResult = await rpc.mongo().then((m) => m.query(thisParsed));
+            const queryResult = await rpc.mongoQuery(thisParsed);
 
             const wrappedResult = markRaw(wrapRpcAsyncEnumerable(queryResult));
 
