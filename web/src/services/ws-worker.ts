@@ -6,17 +6,22 @@ const sendQueue: any[] = [];
 let connected = false;
 
 const queueSend = (message?: string) => {
-   if (message) { sendQueue.push(message); }
-   if (!sendQueue.length) { return; }
+   if (message) {
+      sendQueue.push(message);
+   }
+   if (!sendQueue.length) {
+      return;
+   }
 
-   if (!connected) { return; }
+   if (!connected) {
+      return;
+   }
 
    const toSend = sendQueue.shift();
    ws?.send(toSend);
 
    queueSend();
 };
-
 
 const emitter = new EventEmitter();
 
@@ -34,7 +39,7 @@ ws.addEventListener('close', () => {
    emitter.emit('connected', false);
 });
 
-ws.addEventListener('message', data => {
+ws.addEventListener('message', (data) => {
    const obj: CommandServerMessage | SubscriptionServerMessage = JSON.parse(data.data);
    emitter.emit('message', obj);
 });

@@ -48,7 +48,7 @@
 </template>
 
 <script lang="ts">
-   import { observableJoin, useSubscriptionRef, useWs, WidgetManager } from '@/services';
+   import { observableJoin, useConnections, useWs, WidgetManager } from '@/services';
    import { DatabaseListData } from '@core/subscriptions';
    import { defineComponent, watch, ref, computed, onUnmounted } from 'vue';
    import { Widget } from '@core/models';
@@ -64,15 +64,9 @@
       setup(props) {
          const ws = useWs();
 
-         const connections = useSubscriptionRef(
-            ws
-               .subscribe({
-                  name: 'subscription.config.connections.list',
-               })
-               .map((d) => d.connections)
-         );
+         const connections = useConnections();
 
-         const connectionNames = computed(() => connections.value?.map((c) => c.name).sort((a, b) => a.localeCompare(b)));
+         const connectionNames = computed(() => connections.value?.map((c) => c.name));
 
          const connectionFilters = ref<string[] | undefined>(props.connections);
          watch(
@@ -115,16 +109,20 @@
 
          // eslint-disable-next-line no-undef
          let sub: ZenObservable.Subscription | undefined;
-         watch(allDbs$, (dbs$) => {
-            if (sub) {
-               sub.unsubscribe();
-            }
-            sub = dbs$.subscribe((data) => {
-               const newArr = rawDbs.value.filter((d) => d.connection !== data.connection);
-               newArr.push(data);
-               rawDbs.value = newArr;
-            });
-         });
+         watch(
+            allDbs$,
+            (dbs$) => {
+               if (sub) {
+                  sub.unsubscribe();
+               }
+               sub = dbs$.subscribe((data) => {
+                  const newArr = rawDbs.value.filter((d) => d.connection !== data.connection);
+                  newArr.push(data);
+                  rawDbs.value = newArr;
+               });
+            },
+            { immediate: true }
+         );
 
          onUnmounted(() => sub?.unsubscribe());
 

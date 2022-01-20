@@ -19,7 +19,6 @@ export const subscriptionHandlers: Record<SubscriptionNames, Handler<any>> = {
    'subscription.mongo.database.collections.list': collectionsListHandler,
    'subscription.mongo.server.databases.list': databasesListHandler,
 
-   'subscription.config.connections.list': config.connectionsListHandler,
    'subscription.config.workspaces.state': config.workspaceStateHandler,
    'subscription.config.workspaces.list': config.workspacesListHandler,
    'subscription.config.favorites': config.favoritesHandler,

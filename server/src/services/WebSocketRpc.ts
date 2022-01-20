@@ -4,6 +4,7 @@ import { SocketStream } from 'fastify-websocket';
 import { DefaultSerializer, Transport } from 'rpc-thing';
 import { WorkspaceServices } from './index.js';
 import { RpcService } from './RpcService.js';
+import { v4 } from 'uuid';
 
 export class WebsocketRpc {
    public handler = async (socketStream: SocketStream, req: FastifyRequest) => {
@@ -13,9 +14,21 @@ export class WebsocketRpc {
 
       const services = new WorkspaceServices();
       const rpcService = new RpcService(services);
+      const inFlight = new Map<string, (data: any) => void>();
+
       const transport: Transport = {
-         invoke: () => {
-            throw new Error('NotImplemented');
+         invoke: async (data: unknown) => {
+            const msg: RpcTransportMessage = {
+               id: v4(),
+               data,
+            };
+
+            const result = await new Promise<unknown>((r) => {
+               inFlight.set(msg.id, r);
+               socketStream.socket.send(JSON.stringify(msg));
+            });
+
+            return result;
          },
       };
       const serializer = new DefaultSerializer(transport, rpcService);
@@ -23,6 +36,13 @@ export class WebsocketRpc {
 
       socketStream.socket.on('message', async (buf: Buffer) => {
          const msg: RpcTransportMessage = JSON.parse(buf.toString());
+
+         const inflight = inFlight.get(msg.id);
+         if (inflight) {
+            inflight(msg.data);
+            inFlight.delete(msg.id);
+            return;
+         }
 
          const result = await serializer.invoke(msg.data);
 

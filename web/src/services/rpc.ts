@@ -1,4 +1,4 @@
-import { RpcThing, DefaultSerializer, type Transport, type PromisfiedService } from 'rpc-thing';
+import { RpcThing, DefaultSerializer, type Transport, type PromisfiedService, PushHandler } from 'rpc-thing';
 import { type RpcService } from '@core/RpcService';
 import { type RpcTransportMessage } from '@core/models';
 import { v4 } from 'uuid';
@@ -24,14 +24,31 @@ function createTransport(): Transport {
    const ws = new WebSocket(url);
    const inFlight = new Map<string, (data: any) => void>();
 
-   ws.addEventListener('message', (data) => {
+   let pushHandler: PushHandler | undefined;
+
+   ws.addEventListener('message', async (data) => {
       const obj: RpcTransportMessage = JSON.parse(data.data);
       const resolver = inFlight.get(obj.id);
-      if (!resolver) {
-         throw new Error(`Resolver not found for transport message id ${obj.id}`);
+      if (resolver) {
+         resolver(obj.data);
+         inFlight.delete(obj.id);
+         return;
       }
-      resolver(obj.data);
-      inFlight.delete(obj.id);
+
+      if (pushHandler) {
+         const handled = pushHandler(obj.data);
+         if (handled) {
+            const result = await Promise.resolve(handled.result);
+            const reply: RpcTransportMessage = {
+               id: obj.id,
+               data: result,
+            };
+            ws.send(JSON.stringify(reply));
+            return;
+         }
+      }
+
+      throw new Error(`Resolver not found for transport message id ${obj.id}`);
    });
 
    let readyResolver: () => void = () => {
@@ -46,8 +63,10 @@ function createTransport(): Transport {
    ws.addEventListener('close', () => {
       readyProm = new Promise<void>((r) => (readyResolver = r));
    });
-
    const transport: Transport = {
+      setPushHandler: (handler: PushHandler): void => {
+         pushHandler = handler;
+      },
       invoke: async (data: unknown): Promise<unknown> => {
          const msg: RpcTransportMessage = {
             id: v4(),
