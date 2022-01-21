@@ -9,7 +9,6 @@ export type Handler<T extends Command = Command> = (cmd: T, services: WorkspaceS
 type SubscriptionNames = Command['name'];
 
 export const commandHandlers: Record<SubscriptionNames, Handler<any>> = {
-   'command.config.connections.update': config.connectionsUpdateHandler,
    'command.config.workspaces.update': config.workspacesUpdate,
    'command.config.workspaces.state.update': config.workspaceStateUpdateHandler,
    'command.config.favorites.update': config.favoritesUpdateHandler,

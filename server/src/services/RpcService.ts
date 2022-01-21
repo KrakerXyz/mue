@@ -1,5 +1,6 @@
+import ev from 'eventemitter3';
 import { Connection, MongoQuery, QueryRecord } from '../../../core/models/index.js';
-import type { RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
+import { ListItem, ListItemType, RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
 import { getConnection, WorkspaceServices } from './index.js';
 
 export class RpcService implements RpcServiceInterface {
@@ -7,20 +8,54 @@ export class RpcService implements RpcServiceInterface {
 
    public constructor(private readonly _services: WorkspaceServices) {}
 
-   public configConnectionList(callback: (connection: Connection) => void): Subscription {
+   private readonly _connectionUpdated = new ev.EventEmitter<'connection-updated', ListItem<Connection>>();
+   public configConnectionList(callback: (connection: ListItem<Connection>) => void): Subscription {
+      this.debug('Starting connectionList');
       let closed = false;
       (async () => {
-         this.debug('Getting connection list');
          const connections = await this._services.config.connections.list();
          if (closed) {
             return;
          }
-         connections?.forEach((c) => callback(c));
+         connections?.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
       })();
 
-      return () => {
-         closed = true;
+      const onUpdate = (c: ListItem<Connection>) => {
+         this.debug('Got connectionList update');
+         callback(c);
       };
+
+      this._connectionUpdated.on('connection-updated', onUpdate);
+
+      return () => {
+         this.debug('Closing connectionList');
+         closed = true;
+         this._connectionUpdated.off('connection-updated', onUpdate);
+      };
+   }
+
+   public async configConnectionPut(connection: Connection): Promise<void> {
+      const connections = (await this._services.config.connections.list()) ?? [];
+      const existingIndex = connections?.findIndex((c) => c.name === connection.name);
+      if (existingIndex === -1) {
+         connections.push(connection);
+      }
+      {
+         connections[existingIndex] = connection;
+      }
+      await this._services.config.connections.update(connections);
+      this._connectionUpdated.emit('connection-updated', { type: ListItemType.Update, item: connection });
+   }
+
+   public async configConnectionDelete(connection: Connection): Promise<void> {
+      const connections = (await this._services.config.connections.list()) ?? [];
+      const existingIndex = connections?.findIndex((c) => c.name === connection.name);
+      if (existingIndex === -1) {
+         throw new Error('Connection not found');
+      }
+      connections.splice(existingIndex, 1);
+      await this._services.config.connections.update(connections);
+      this._connectionUpdated.emit('connection-updated', { type: ListItemType.Delete, item: connection });
    }
 
    public async *mongoQuery(q: MongoQuery): AsyncGenerator<QueryRecord> {
