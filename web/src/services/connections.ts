@@ -15,22 +15,22 @@ export function useConnections(): Ref<Connection[] | undefined> {
    const rpc = useRpc();
 
    Promise.resolve(
-      rpc.configConnectionList((item) => {
+      rpc.configConnectionList((listItem) => {
          if (!r) {
             return;
          }
          const newArr = [...(r.value ?? [])];
-         const existingIndex = newArr.findIndex((c) => c.name === item.item.name);
-         if (item.type === ListItemType.Delete) {
+         const existingIndex = newArr.findIndex((c) => c.name === listItem.item.name);
+         if (listItem.type === ListItemType.Delete) {
             if (existingIndex === -1) {
                console.warn('Deleted connection does not exist');
                return;
             }
             newArr.splice(existingIndex, 1);
          } else if (existingIndex !== -1) {
-            newArr.splice(existingIndex, 1, item.item);
+            newArr.splice(existingIndex, 1, listItem.item);
          } else {
-            newArr.push(item.item);
+            newArr.push(listItem.item);
             newArr.sort((a, b) => a.name.localeCompare(b.name));
          }
          r.value = newArr;

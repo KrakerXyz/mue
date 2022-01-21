@@ -1,4 +1,4 @@
-import { Connection, Database } from "./models";
+import { Connection, Database, Workspace } from "./models";
 import type { QueryRecord, MongoQuery } from "./models/MongoQuery";
 
 export type Subscription = () => void;
@@ -11,14 +11,21 @@ export enum ListItemType {
 export type ListItem<T> = { type: ListItemType; item: T };
 
 export interface RpcService {
+
   configConnectionList(
     callback: (connection: ListItem<Connection>) => void
   ): Subscription;
   configConnectionPut(connection: Connection): Promise<void>;
   configConnectionDelete(connection: Connection): Promise<void>;
+
+  configWorkspaceList(
+    callback: (workspace: ListItem<Workspace>)=> void
+  ): Subscription;
+
   mongoDatabaseList(
     connection: string,
     callback: (database: ListItem<Database>) => void
   ): Subscription;
+  
   mongoQuery(query: MongoQuery): AsyncGenerator<QueryRecord>;
 }

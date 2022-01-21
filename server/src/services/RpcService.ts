@@ -1,5 +1,5 @@
 import ev from 'eventemitter3';
-import { Connection, Database, MongoQuery, QueryRecord } from '../../../core/models/index.js';
+import { Connection, Database, MongoQuery, QueryRecord, Workspace } from '../../../core/models/index.js';
 import { ListItem, ListItemType, RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
 import { getConnection, WorkspaceServices } from './index.js';
 
@@ -58,6 +58,32 @@ export class RpcService implements RpcServiceInterface {
       this._services.cache.delete(`databaseList-${connection.name}`);
       await this._services.config.connections.update(connections);
       this._connectionUpdated.emit('connection-updated', { type: ListItemType.Delete, item: connection });
+   }
+
+   private readonly _workspaceUpdated = new ev.EventEmitter<'workspace-updated', ListItem<Workspace>>();
+   public configWorkspaceList(callback: (workspace: ListItem<Workspace>)=> void): Subscription {
+      this.debug('Starting workspaceList');
+      let closed = false;
+      (async () => {
+         const workspaces = await this._services.config.workspaces.list();
+         if (closed) {
+            return;
+         }
+         workspaces?.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
+      })();
+
+      const onUpdate = (c: ListItem<Workspace>) => {
+         this.debug('Got workspaceList update');
+         callback(c);
+      };
+
+      this._workspaceUpdated.on('workspace-updated', onUpdate);
+
+      return () => {
+         this.debug('Closing workspaceList');
+         closed = true;
+         this._workspaceUpdated.off('workspace-updated', onUpdate);
+      };
    }
 
    private readonly _databaseUpdated = new ev.EventEmitter<'database-updated', ListItem<Database>>();
