@@ -48,10 +48,10 @@
 </template>
 
 <script lang="ts">
-   import { observableJoin, useConnections, useWs, WidgetManager } from '@/services';
-   import { DatabaseListData } from '@core/subscriptions';
+   import { useConnections, useRpc, WidgetManager } from '@/services';
    import { defineComponent, watch, ref, computed, onUnmounted } from 'vue';
-   import { Widget } from '@core/models';
+   import { Widget, Database } from '@core/models';
+   import { ListItemType, Subscription } from '@core/RpcService';
 
    export default defineComponent({
       props: {
@@ -62,7 +62,7 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
+         const rpc = useRpc();
 
          const connections = useConnections();
 
@@ -89,42 +89,49 @@
             }
          };
 
-         const databaseLists$Array = computed(() => {
-            if (!connections.value) {
-               return [];
-            }
-            return connections.value.map((c) => {
-               return ws.subscribe({
-                  name: 'subscription.mongo.server.databases.list',
-                  connection: c.name,
-               });
-            });
-         });
-
-         const allDbs$ = computed(() => {
-            return observableJoin(databaseLists$Array.value);
-         });
-
-         const rawDbs = ref<DatabaseListData[]>([]);
+         const rawDbs = ref<Database[]>([]);
 
          // eslint-disable-next-line no-undef
-         let sub: ZenObservable.Subscription | undefined;
+         let subsProm: Promise<Subscription[]> | undefined;
+
+         const unsub = () => {
+            subsProm?.then((subs) => {
+               subs.forEach((s) => s());
+            });
+         };
+
          watch(
-            allDbs$,
-            (dbs$) => {
-               if (sub) {
-                  sub.unsubscribe();
+            connections,
+            (connections) => {
+               unsub();
+               subsProm = undefined;
+               if (!connections) {
+                  return;
                }
-               sub = dbs$.subscribe((data) => {
-                  const newArr = rawDbs.value.filter((d) => d.connection !== data.connection);
-                  newArr.push(data);
-                  rawDbs.value = newArr;
-               });
+               const newSubs = connections.map((c) =>
+                  rpc.mongoDatabaseList(c.name, (dbItem) => {
+                     const newList = [...rawDbs.value];
+                     const existingIndex = newList.findIndex((d) => d.name === dbItem.item.name);
+                     if (dbItem.type === ListItemType.Delete) {
+                        if (existingIndex !== -1) {
+                           newList.splice(existingIndex, 1);
+                        }
+                     } else if (existingIndex === -1) {
+                        newList.push(dbItem.item);
+                     } else {
+                        newList[existingIndex] = dbItem.item;
+                     }
+                     rawDbs.value = newList;
+                  })
+               );
+               subsProm = Promise.all(newSubs);
             },
             { immediate: true }
          );
 
-         onUnmounted(() => sub?.unsubscribe());
+         onUnmounted(() => {
+            unsub();
+         });
 
          const newNameFilter = ref<string>(props.nameFilter ?? '');
 
@@ -137,11 +144,8 @@
             const nameFilterLower = newNameFilter.value.toLocaleLowerCase();
             return rawDbs.value
                .filter((d) => !connectionFilters.value || connectionFilters.value.includes(d.connection))
-               .flatMap((c) =>
-                  c.databases
-                     .filter((d) => !d.empty && (!nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower)))
-                     .map((d) => ({ key: `${c.connection}-${d.name}`, connectionName: c.connection, databaseName: d.name }))
-               )
+               .filter((d) => !nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower))
+               .map((d) => ({ key: `${d.connection}-${d.name}`, connectionName: d.connection, databaseName: d.name }))
                .sort((a, b) => a.databaseName.localeCompare(b.databaseName) || a.connectionName.localeCompare(b.connectionName));
          });
 

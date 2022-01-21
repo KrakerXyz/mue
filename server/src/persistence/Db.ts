@@ -1,17 +1,17 @@
-
 import level from 'level';
 
 const instances = new Map<string, level.LevelDB>();
 
 export class Db {
-
    private readonly _level: level.LevelDB;
 
    public constructor(public readonly name: string = 'default') {
       let db = instances.get(name);
       if (!db) {
          db = level(`.level/${name}`);
-         if (name === 'cache') { db.clear(); }
+         if (name === 'cache') {
+            db.clear();
+         }
          instances.set(name, db);
       }
       this._level = db;
@@ -26,23 +26,32 @@ export class Db {
    }
 
    public get(key: string): Promise<any | null> {
-      return this._level.get(key).then(v => JSON.parse(v)).catch(() => null);
+      return this._level
+         .get(key)
+         .then((v) => JSON.parse(v))
+         .catch(() => null);
    }
 
+   public delete(key: string): Promise<void> {
+      return this._level.del(key);
+   }
 }
 
 export class DbNamespace<T = any> {
    public constructor(public readonly name: string, private readonly _parent: Db | DbNamespace) {
-      if (name.includes('|')) { throw new Error('Namespace cannot include "|"'); }
+      if (name.includes('|')) {
+         throw new Error('Namespace cannot include "|"');
+      }
    }
 
    public createNamespace<T = any>(name: string): DbNamespace {
       return new DbNamespace<T>(name, this);
    }
 
-
    public get fullName(): string {
-      if (this._parent instanceof Db) { return this.name; }
+      if (this._parent instanceof Db) {
+         return this.name;
+      }
       return `${this._parent.fullName}|${this.name}`;
    }
 
@@ -54,5 +63,10 @@ export class DbNamespace<T = any> {
    public get(key: string): Promise<T | null> {
       const fullKey = `${this.name}|${key}`;
       return this._parent.get(fullKey);
+   }
+
+   public delete(key: string): Promise<void> {
+      const fullKey = `${this.name}|${key}`;
+      return this._parent.delete(fullKey);
    }
 }

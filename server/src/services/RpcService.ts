@@ -1,5 +1,5 @@
 import ev from 'eventemitter3';
-import { Connection, MongoQuery, QueryRecord } from '../../../core/models/index.js';
+import { Connection, Database, MongoQuery, QueryRecord } from '../../../core/models/index.js';
 import { ListItem, ListItemType, RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
 import { getConnection, WorkspaceServices } from './index.js';
 
@@ -43,6 +43,7 @@ export class RpcService implements RpcServiceInterface {
       {
          connections[existingIndex] = connection;
       }
+      this._services.cache.delete(`databaseList-${connection.name}`);
       await this._services.config.connections.update(connections);
       this._connectionUpdated.emit('connection-updated', { type: ListItemType.Update, item: connection });
    }
@@ -54,8 +55,67 @@ export class RpcService implements RpcServiceInterface {
          throw new Error('Connection not found');
       }
       connections.splice(existingIndex, 1);
+      this._services.cache.delete(`databaseList-${connection.name}`);
       await this._services.config.connections.update(connections);
       this._connectionUpdated.emit('connection-updated', { type: ListItemType.Delete, item: connection });
+   }
+
+   private readonly _databaseUpdated = new ev.EventEmitter<'database-updated', ListItem<Database>>();
+   public mongoDatabaseList(connection: string, callback: (database: ListItem<Database>) => void): Subscription {
+      this.debug('Starting databaseList');
+      let closed = false;
+
+      (async () => {
+         let realSent = false;
+         const cacheKey = `databaseList-${connection}`;
+         this._services.cache.get<Database[]>(cacheKey).then((x) => {
+            if (!x || realSent || closed) {
+               return;
+            }
+
+            x.forEach((d) => callback({ type: ListItemType.Cache, item: d }));
+         });
+
+         const connections = await this._services.config.connections.list();
+         const con = connections?.find((x) => x.name === connection);
+         if (!con) {
+            throw new Error(`Connection ${connection} not found`);
+         }
+         if (closed) {
+            return;
+         }
+         const mClient = await getConnection(con.connectionString);
+         if (closed) {
+            return;
+         }
+         const list = await mClient.db().admin().listDatabases();
+         if (closed) {
+            return;
+         }
+         const dbs = list.databases.map((x) => {
+            const d: Database = {
+               connection,
+               name: x.name,
+            };
+            return d;
+         });
+         this._services.cache.update(cacheKey, dbs);
+         dbs.forEach((d) => callback({ type: ListItemType.Initial, item: d }));
+         realSent = true;
+      })();
+
+      const onUpdate = (c: ListItem<Database>) => {
+         this.debug('Got databaseList update');
+         callback(c);
+      };
+
+      this._databaseUpdated.on('database-updated', onUpdate);
+
+      return () => {
+         this.debug('Closing databaseList');
+         closed = true;
+         this._databaseUpdated.off('database-updated', onUpdate);
+      };
    }
 
    public async *mongoQuery(q: MongoQuery): AsyncGenerator<QueryRecord> {

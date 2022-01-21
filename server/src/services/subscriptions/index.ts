@@ -1,6 +1,6 @@
 import { Subscription, SubscriptionDataType } from '../../../../core/subscriptions/index.js';
 import { WorkspaceServices } from '../index.js';
-import { collectionsListHandler, databasesListHandler } from './mongo/index.js';
+import { collectionsListHandler } from './mongo/index.js';
 import Observable from 'zen-observable';
 import * as config from './config/index.js';
 
@@ -17,7 +17,6 @@ type SubscriptionNames = Subscription['name'];
 
 export const subscriptionHandlers: Record<SubscriptionNames, Handler<any>> = {
    'subscription.mongo.database.collections.list': collectionsListHandler,
-   'subscription.mongo.server.databases.list': databasesListHandler,
 
    'subscription.config.workspaces.state': config.workspaceStateHandler,
    'subscription.config.workspaces.list': config.workspacesListHandler,
