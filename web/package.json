@@ -15,7 +15,6 @@
     "lint-tsc": "vue-tsc --noEmit && eslint src/**/*.{ts,vue}"
   },
   "dependencies": {
-    "comlink": "^4.3.1",
     "date-fns": "^2.27.0",
     "json5": "^2.2.0",
     "rpc-thing": "file:../../rpc-thing",
@@ -37,8 +36,6 @@
     "postcss-nested": "^5.0.5",
     "typescript": "^4.3.2",
     "vite": "^2.3.7",
-    "vite-plugin-comlink": "^2.1.0",
-    "vite-plugin-worker": "^1.0.4",
     "vue-tsc": "^0.30.2"
   },
   "keywords": [],

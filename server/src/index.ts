@@ -6,7 +6,6 @@ import fastify from 'fastify';
 import fastifyWebsocket from 'fastify-websocket';
 import fastifyStatic from 'fastify-static';
 
-import { WebSocketManager } from './services/index.js';
 import path from 'path';
 const __dirname = path.resolve();
 
@@ -38,9 +37,6 @@ server.register(fastifyStatic, {
    immutable: true,
    maxAge: '1d',
 });
-
-const webSocketManager = new WebSocketManager();
-server.get('/ws', { websocket: true }, webSocketManager.handler);
 
 const websocketRpc = new WebsocketRpc();
 server.get('/ws-rpc', { websocket: true }, websocketRpc.handler);

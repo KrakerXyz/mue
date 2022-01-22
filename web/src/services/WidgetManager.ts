@@ -120,7 +120,6 @@ export class WidgetManager {
          const existingIndex = this._widgets.findIndex((x) => x.id === w.item.id);
          if (w.type === ListItemType.Delete) {
             if (existingIndex === -1) {
-               console.warn('Deleted widget not found');
                return;
             }
          } else if (existingIndex === -1) {
@@ -133,7 +132,7 @@ export class WidgetManager {
 
    // eslint-disable-next-line no-undef
    private _updateStateThrottle: NodeJS.Timeout | null = null;
-   private _widgetsSnapshot: Widget[] = [];
+   private _widgetsSnapshot: Widget[] | null = null;
    private saveState() {
       if (this._updateStateThrottle) {
          clearTimeout(this._updateStateThrottle);
@@ -143,7 +142,7 @@ export class WidgetManager {
       }
       this._updateStateThrottle = setTimeout(async () => {
          this._updateStateThrottle = null;
-         for (const sw of this._widgetsSnapshot) {
+         for (const sw of this._widgetsSnapshot ?? []) {
             const w = this._widgets.find((x) => x.id === sw.id);
             if (!w) {
                this._rpc.configWorkspaceWidgetDelete(sw);
@@ -154,7 +153,7 @@ export class WidgetManager {
 
          //Checking for new widgets
          for (const w of this._widgets) {
-            const sw = this._widgetsSnapshot.find((x) => x.id === w.id);
+            const sw = this._widgetsSnapshot?.find((x) => x.id === w.id);
             if (sw) {
                continue;
             }

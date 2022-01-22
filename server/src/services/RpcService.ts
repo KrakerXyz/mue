@@ -1,6 +1,17 @@
 import ev from 'eventemitter3';
-import { Connection, Database, MongoQuery, QueryRecord, Widget, Workspace } from '../../../core/models/index.js';
-import { ListItem, ListItemType, RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
+import {
+   Collection,
+   Connection,
+   Database,
+   MongoQuery,
+   QueryRecord,
+   Widget,
+   Workspace,
+   ListItem,
+   ListItemType,
+   RpcService as RpcServiceInterface,
+   Subscription,
+} from '../../../core/index.js';
 import { getConnection, WorkspaceServices } from './index.js';
 
 export class RpcService implements RpcServiceInterface {
@@ -169,6 +180,7 @@ export class RpcService implements RpcServiceInterface {
       {
          state.widgets[existingIndex] = widget;
       }
+      this.debug(`Update widget ${widget.id}`);
       await this._services.config.workspaces.state.update(widget.workspaceId, state);
       this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Update, item: widget });
    }
@@ -182,11 +194,11 @@ export class RpcService implements RpcServiceInterface {
       {
          state.widgets.splice(existingIndex, 1);
       }
+      this.debug(`Deleting widget ${widget.id}`);
       await this._services.config.workspaces.state.update(widget.workspaceId, state);
       this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Delete, item: widget });
    }
 
-   private readonly _databaseUpdated = new ev.EventEmitter<'database-updated', ListItem<Database>>();
    public mongoDatabaseList(connection: string, callback: (database: ListItem<Database>) => void): Subscription {
       this.debug('Starting databaseList');
       let closed = false;
@@ -236,17 +248,69 @@ export class RpcService implements RpcServiceInterface {
          realSent = true;
       })();
 
-      const onUpdate = (c: ListItem<Database>) => {
-         this.debug('Got databaseList update');
-         callback(c);
-      };
-
-      this._databaseUpdated.on('database-updated', onUpdate);
-
       return () => {
          this.debug('Closing databaseList');
          closed = true;
-         this._databaseUpdated.off('database-updated', onUpdate);
+      };
+   }
+
+   public mongoCollectionList(connection: string, database: string, callback: (database: ListItem<Collection>) => void): Subscription {
+      this.debug('Starting collectionList');
+      let closed = false;
+
+      (async () => {
+         let realSent = false;
+         const cacheKey = `collectionList-${connection}-${database}`;
+         this._services.cache.get<Collection[]>(cacheKey).then((x) => {
+            if (!x || realSent || closed) {
+               return;
+            }
+
+            x.forEach((d) => callback({ type: ListItemType.Cache, item: d }));
+         });
+
+         const connections = await this._services.config.connections.list();
+         const con = connections?.find((x) => x.name === connection);
+         if (!con) {
+            throw new Error(`Connection ${connection} not found`);
+         }
+         if (closed) {
+            return;
+         }
+         const mClient = await getConnection(con.connectionString);
+         if (closed) {
+            return;
+         }
+
+         const db = mClient.db(database);
+         const list = db.listCollections();
+         if (closed) {
+            return;
+         }
+
+         const cols: Collection[] = [];
+         for await (const dbCol of list) {
+            const col: Collection = {
+               connection,
+               database,
+               name: dbCol.name,
+            };
+            cols.push(col);
+            callback({ type: ListItemType.Initial, item: col });
+         }
+
+         if (!cols.length) {
+            callback({ type: ListItemType.InitialEmpty });
+         }
+
+         this._services.cache.update(cacheKey, cols);
+
+         realSent = true;
+      })();
+
+      return () => {
+         this.debug('Closing collectionList');
+         closed = true;
       };
    }
 

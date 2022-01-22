@@ -1,5 +1,5 @@
 import { Db, DbNamespace } from './Db';
-import { Favorites, Workspace, WorkspaceState, Connection } from '../../../core/models/index.js';
+import { Workspace, WorkspaceState, Connection } from '../../../core/index.js';
 
 export class Config {
    private readonly _ns: DbNamespace;
@@ -34,15 +34,6 @@ export class Config {
          update: (id: string, workspaceState: WorkspaceState) => {
             return this._nsWorkspaces.createNamespace('state').put(id, workspaceState);
          },
-      },
-   };
-
-   public readonly favorites = {
-      get: () => {
-         return this._ns.get('favorites');
-      },
-      update: (favorites: Favorites) => {
-         return this._ns.put('favorites', favorites);
       },
    };
 }

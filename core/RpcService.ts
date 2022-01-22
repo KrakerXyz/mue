@@ -1,4 +1,4 @@
-import { Connection, Database, Favorites, Widget, Workspace } from "./models";
+import { Collection, Connection, Database, Widget, Workspace } from "./models";
 import type { QueryRecord, MongoQuery } from "./models/MongoQuery";
 
 export type Subscription = () => void;
@@ -36,6 +36,12 @@ export interface RpcService {
   mongoDatabaseList(
     connection: string,
     callback: (database: ListItem<Database>) => void
+  ): Subscription;
+
+  mongoCollectionList(
+    connection: string,
+    database: string,
+    callback: (collection: ListItem<Collection>) => void
   ): Subscription;
 
   mongoQuery(query: MongoQuery): AsyncGenerator<QueryRecord>;

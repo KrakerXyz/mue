@@ -33,10 +33,11 @@
 </template>
 
 <script lang="ts">
-   import { useFavorites, useSubscriptionRef, useWs, WidgetManager } from '@/services';
-   import { computed, defineComponent, ref } from 'vue';
+   import { useRpc, WidgetManager } from '@/services';
+   import { computed, defineComponent, onUnmounted, ref } from 'vue';
    import { Collection, Widget } from '@core/models';
    import CollectionItemVue from './CollectionItem.vue';
+   import { ListItemType } from '@core/RpcService';
 
    export default defineComponent({
       components: {
@@ -49,34 +50,38 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
-         const favorites = useFavorites();
-
-         const isFavorite = (c: Collection) => {
-            return favorites.value?.collections.some((x) => x.name === c.name && x.connection === props.connection && x.database === props.database);
-         };
+         const rpc = useRpc();
 
          const collectionSort = (a: Collection, b: Collection): number => {
-            const aFav = isFavorite(a);
-            const bFav = isFavorite(b);
-            if (aFav && !bFav) {
-               return -1;
-            }
-            if (!aFav && bFav) {
-               return 1;
-            }
             return a.name.localeCompare(b.name);
          };
 
-         const cols = useSubscriptionRef(
-            ws
-               .subscribe({
-                  name: 'subscription.mongo.database.collections.list',
-                  connection: props.connection,
-                  database: props.database,
-               })
-               .map((r) => r.collections)
-         );
+         const cols = ref<Collection[]>();
+
+         const colSubscription = rpc.mongoCollectionList(props.connection, props.database, (listItem) => {
+            if (listItem.type === ListItemType.InitialEmpty) {
+               cols.value = [];
+               return;
+            }
+
+            const newArr = [...(cols.value ?? [])];
+            const existingIndex = newArr.findIndex((c) => c.name === listItem.item.name);
+            if (listItem.type === ListItemType.Delete) {
+               if (existingIndex === -1) {
+                  console.warn('Deleted collections does not exist');
+                  return;
+               }
+               newArr.splice(existingIndex, 1);
+            } else if (existingIndex !== -1) {
+               newArr.splice(existingIndex, 1, listItem.item);
+            } else {
+               newArr.push(listItem.item);
+               newArr.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            cols.value = newArr;
+         });
+
+         onUnmounted(() => Promise.resolve(colSubscription).then((sub) => sub()));
 
          const nameFilter = ref<string>();
 

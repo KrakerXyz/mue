@@ -1,3 +1,5 @@
 export interface Collection {
-   name: string;
+  connection: string;
+  database: string;
+  name: string;
 }

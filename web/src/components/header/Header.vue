@@ -17,17 +17,12 @@
                <v-favorites-nav-item :widget-manager="widgetManager"></v-favorites-nav-item>
             </template>
          </ul>
-
-         <span class="navbar-text">
-            <span v-if="wsState.connected" class="text-success"><i class="fas fa-wifi fa-fw"></i></span>
-            <span v-if="!wsState.connected" class="text-danger"><i class="fas fa-wifi-slash fa-fw"></i></span>
-         </span>
       </div>
    </div>
 </template>
 
 <script lang="ts">
-   import { useWorkspaces, WidgetManager, useSelectedWorkspaceId, useConnections, useWs } from '@/services';
+   import { useWorkspaces, WidgetManager, useSelectedWorkspaceId, useConnections } from '@/services';
    import { computed, defineComponent, toRef } from 'vue';
    import FavoritesNavItemVue from './FavoritesNavItem.vue';
 
@@ -40,7 +35,6 @@
       },
       setup(props) {
          const manager = toRef(props, 'widgetManager');
-         const ws = useWs();
          const connections = useConnections();
          const hasConnections = computed(() => !!connections.value?.length);
          const workspaces = useWorkspaces();
@@ -59,7 +53,7 @@
                manager.value.add(widget, undefined);
             }
          };
-         return { openWidget, selectedWorkspace, hasConnections, wsState: ws.state };
+         return { openWidget, selectedWorkspace, hasConnections };
       },
    });
 </script>
