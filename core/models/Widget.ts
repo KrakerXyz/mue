@@ -17,6 +17,7 @@ export type WidgetName =
 
 export interface Widget<TName extends WidgetName = any> {
   id: string;
+  workspaceId: string;
   component: {
     name: TName;
     props: WidgetProps<TName>;

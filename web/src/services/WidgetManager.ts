@@ -1,11 +1,13 @@
-import { WorkspaceStateUpdateCommand } from '@core/commands';
-import { Widget, WidgetName, WidgetProps, WorkspaceState } from '@core/models';
+import { Widget, WidgetName, WidgetProps } from '@core/models';
+import { ListItemType, Subscription } from '@core/RpcService.js';
+import { deepClone } from '@core/util/deepClone.js';
+import { deepEquals } from '@core/util/deepEquals.js';
 import { v4 } from 'uuid';
 import { reactive } from 'vue';
-import { useWs } from './index.js';
+import { useRpc } from './rpc.js';
 
 export class WidgetManager {
-   private readonly _ws = useWs();
+   private readonly _rpc = useRpc();
    private readonly _widgets = reactive<Widget[]>([]);
 
    public constructor(public readonly workspaceId: string) {}
@@ -17,6 +19,7 @@ export class WidgetManager {
    public add<TName extends WidgetName>(name: TName, props: WidgetProps<TName>) {
       const widget: Widget<TName> = {
          id: v4(),
+         workspaceId: this.workspaceId,
          component: {
             name,
             props,
@@ -93,41 +96,71 @@ export class WidgetManager {
       this.saveState();
    };
 
-   public loadState(state: WorkspaceState) {
+   private _widgetSubscription: Subscription | null = null;
+   public async loadState(workspaceId: string) {
       this._widgets.splice(0, this._widgets.length);
-      this._widgets.push(...state.widgets);
-      let updated = false;
-      for (const w of this._widgets) {
-         if (!w.workspace.style.width) {
-            w.workspace.style.width = '50%';
-            updated = true;
-         }
-         if (!w.workspace.style.height) {
-            w.workspace.style.height = '50%';
-            updated = true;
-         }
+
+      if (this._widgetSubscription) {
+         this._widgetSubscription();
       }
-      if (updated) {
-         this.saveState();
-      }
+
+      this._widgetSubscription = this._rpc.configWorkspaceWidgetList(workspaceId, (w) => {
+         for (const w of this._widgets) {
+            if (!w.workspace.style.width) {
+               w.workspace.style.width = '50%';
+            }
+            if (!w.workspace.style.height) {
+               w.workspace.style.height = '50%';
+            }
+         }
+
+         if (w.type === ListItemType.InitialEmpty) {
+            return;
+         }
+         const existingIndex = this._widgets.findIndex((x) => x.id === w.item.id);
+         if (w.type === ListItemType.Delete) {
+            if (existingIndex === -1) {
+               console.warn('Deleted widget not found');
+               return;
+            }
+         } else if (existingIndex === -1) {
+            this._widgets.push(w.item);
+         } else {
+            this._widgets.splice(existingIndex, 1, w.item);
+         }
+      });
    }
 
    // eslint-disable-next-line no-undef
    private _updateStateThrottle: NodeJS.Timeout | null = null;
+   private _widgetsSnapshot: Widget[] = [];
    private saveState() {
       if (this._updateStateThrottle) {
          clearTimeout(this._updateStateThrottle);
       }
+      if (!this._widgetsSnapshot) {
+         this._widgetsSnapshot = deepClone(this.widgets);
+      }
       this._updateStateThrottle = setTimeout(async () => {
          this._updateStateThrottle = null;
-         const cmd: WorkspaceStateUpdateCommand = {
-            name: 'command.config.workspaces.state.update',
-            workspaceId: this.workspaceId,
-            state: {
-               widgets: this._widgets,
-            },
-         };
-         this._ws.command(cmd);
+         for (const sw of this._widgetsSnapshot) {
+            const w = this._widgets.find((x) => x.id === sw.id);
+            if (!w) {
+               this._rpc.configWorkspaceWidgetDelete(sw);
+            } else if (!deepEquals(sw, w)) {
+               this._rpc.configWorkspaceWidgetPut(w);
+            }
+         }
+
+         //Checking for new widgets
+         for (const w of this._widgets) {
+            const sw = this._widgetsSnapshot.find((x) => x.id === w.id);
+            if (sw) {
+               continue;
+            }
+            this._rpc.configWorkspaceWidgetPut(w);
+         }
+         this._widgetsSnapshot = deepClone(this._widgets);
       }, 500);
    }
 }

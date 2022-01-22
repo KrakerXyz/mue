@@ -8,19 +8,20 @@
 </template>
 
 <script lang="ts">
-   import { toPromise, useConnections, useSelectedWorkspaceId, useWorkspaces, useWs, WidgetManager } from '@/services';
+   import { useConnections, useRpc, useSelectedWorkspaceId, useWorkspaces, WidgetManager } from '@/services';
+   import { Workspace } from '@core/models';
    import { v4 } from 'uuid';
    import { computed, defineComponent, ref, watch } from 'vue';
    import HeaderVue from './header/Header.vue';
-   import Workspace from './Workspace.vue';
+   import WorkspaceVue from './Workspace.vue';
    export default defineComponent({
       components: {
          'v-header': HeaderVue,
-         'v-workspace': Workspace,
+         'v-workspace': WorkspaceVue,
       },
       setup() {
          const connections = useConnections();
-         const ws = useWs();
+         const rpc = useRpc();
          const workspaces = useWorkspaces();
          const selectedWorkspaceId = useSelectedWorkspaceId();
          const selectedWorkspace = computed(() => workspaces.value?.find((ws) => ws.id === selectedWorkspaceId.value));
@@ -33,10 +34,8 @@
                   return;
                }
                if (workspaces.value.length === 0) {
-                  ws.command({
-                     name: 'command.config.workspaces.update',
-                     workspaces: [{ id: v4(), name: 'Default Workspace', description: '' }],
-                  });
+                  const newWorkspace: Workspace = { id: v4(), name: 'Default Workspace', description: '' };
+                  rpc.configWorkspacePut(newWorkspace);
                   return;
                }
 
@@ -64,14 +63,7 @@
                      if (!cons.length) {
                         thisManager.add('connections', undefined);
                      } else {
-                        const workspace$ = ws.subscribe({
-                           name: 'subscription.config.workspaces.state',
-                           workspaceId: thisManager.workspaceId,
-                        });
-
-                        toPromise(workspace$).then((state) => {
-                           thisManager.loadState(state);
-                        });
+                        thisManager.loadState(thisManager.workspaceId);
                      }
                      setTimeout(() => consWatchStop(), 10);
                   },

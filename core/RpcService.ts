@@ -1,17 +1,19 @@
-import { Connection, Database, Workspace } from "./models";
+import { Connection, Database, Favorites, Widget, Workspace } from "./models";
 import type { QueryRecord, MongoQuery } from "./models/MongoQuery";
 
 export type Subscription = () => void;
 export enum ListItemType {
   Cache,
   Initial,
+  InitialEmpty,
   Update,
   Delete,
 }
-export type ListItem<T> = { type: ListItemType; item: T };
+export type ListItem<T> =
+  | { type: Omit<ListItemType, ListItemType.InitialEmpty>; item: T }
+  | { type: ListItemType.InitialEmpty };
 
 export interface RpcService {
-
   configConnectionList(
     callback: (connection: ListItem<Connection>) => void
   ): Subscription;
@@ -19,13 +21,22 @@ export interface RpcService {
   configConnectionDelete(connection: Connection): Promise<void>;
 
   configWorkspaceList(
-    callback: (workspace: ListItem<Workspace>)=> void
+    callback: (workspace: ListItem<Workspace>) => void
   ): Subscription;
+  configWorkspacePut(workspace: Workspace): Promise<void>;
+  configWorkspaceDelete(workspace: Workspace): Promise<void>;
+
+  configWorkspaceWidgetList(
+    workspaceId: string,
+    callback: (widget: ListItem<Widget>) => void
+  ): Subscription;
+  configWorkspaceWidgetPut(widget: Widget): Promise<void>;
+  configWorkspaceWidgetDelete(widget: Widget): Promise<void>;
 
   mongoDatabaseList(
     connection: string,
     callback: (database: ListItem<Database>) => void
   ): Subscription;
-  
+
   mongoQuery(query: MongoQuery): AsyncGenerator<QueryRecord>;
 }

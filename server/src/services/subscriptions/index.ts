@@ -17,7 +17,5 @@ type SubscriptionNames = Subscription['name'];
 
 export const subscriptionHandlers: Record<SubscriptionNames, Handler<any>> = {
    'subscription.mongo.database.collections.list': collectionsListHandler,
-
-   'subscription.config.workspaces.state': config.workspaceStateHandler,
    'subscription.config.favorites': config.favoritesHandler,
 };

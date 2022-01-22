@@ -19,7 +19,14 @@ export function useWorkspaces(): Ref<Workspace[] | undefined> {
          if (!r) {
             return;
          }
+
+         if (listItem.type === ListItemType.InitialEmpty) {
+            r.value = [];
+            return;
+         }
+
          const newArr = [...(r.value ?? [])];
+
          const existingIndex = newArr.findIndex((c) => c.name === listItem.item.name);
          if (listItem.type === ListItemType.Delete) {
             if (existingIndex === -1) {

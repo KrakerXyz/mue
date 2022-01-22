@@ -1,5 +1,5 @@
 import ev from 'eventemitter3';
-import { Connection, Database, MongoQuery, QueryRecord, Workspace } from '../../../core/models/index.js';
+import { Connection, Database, MongoQuery, QueryRecord, Widget, Workspace } from '../../../core/models/index.js';
 import { ListItem, ListItemType, RpcService as RpcServiceInterface, Subscription } from '../../../core/RpcService.js';
 import { getConnection, WorkspaceServices } from './index.js';
 
@@ -17,6 +17,12 @@ export class RpcService implements RpcServiceInterface {
          if (closed) {
             return;
          }
+
+         if (!(connections?.length ?? 0)) {
+            callback({ type: ListItemType.InitialEmpty });
+            return;
+         }
+
          connections?.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
       })();
 
@@ -61,7 +67,7 @@ export class RpcService implements RpcServiceInterface {
    }
 
    private readonly _workspaceUpdated = new ev.EventEmitter<'workspace-updated', ListItem<Workspace>>();
-   public configWorkspaceList(callback: (workspace: ListItem<Workspace>)=> void): Subscription {
+   public configWorkspaceList(callback: (workspace: ListItem<Workspace>) => void): Subscription {
       this.debug('Starting workspaceList');
       let closed = false;
       (async () => {
@@ -69,6 +75,12 @@ export class RpcService implements RpcServiceInterface {
          if (closed) {
             return;
          }
+
+         if (!(workspaces?.length ?? 0)) {
+            callback({ type: ListItemType.InitialEmpty });
+            return;
+         }
+
          workspaces?.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
       })();
 
@@ -84,6 +96,94 @@ export class RpcService implements RpcServiceInterface {
          closed = true;
          this._workspaceUpdated.off('workspace-updated', onUpdate);
       };
+   }
+
+   public async configWorkspacePut(workspace: Workspace): Promise<void> {
+      const workspaces = (await this._services.config.workspaces.list()) ?? [];
+      const existingIndex = workspaces?.findIndex((c) => c.id === workspace.id);
+      if (existingIndex === -1) {
+         workspaces.push(workspace);
+      }
+      {
+         workspaces[existingIndex] = workspace;
+      }
+      await this._services.config.workspaces.update(workspaces);
+      this._workspaceUpdated.emit('workspace-updated', { type: ListItemType.Update, item: workspace });
+   }
+
+   public async configWorkspaceDelete(workspace: Workspace): Promise<void> {
+      const workspaces = (await this._services.config.workspaces.list()) ?? [];
+      const existingIndex = workspaces?.findIndex((c) => c.id === workspace.id);
+      if (existingIndex === -1) {
+         throw new Error('Workspace not found');
+      }
+      workspaces.splice(existingIndex, 1);
+      await this._services.config.workspaces.update(workspaces);
+      this._workspaceUpdated.emit('workspace-updated', { type: ListItemType.Delete, item: workspace });
+   }
+
+   private readonly _workspaceWidgetUpdated = new ev.EventEmitter<'workspace-widget-updated', ListItem<Widget>>();
+   public configWorkspaceWidgetList(workspaceId: string, callback: (widget: ListItem<Widget>) => void): Subscription {
+      this.debug('Starting workspaceWidgetList');
+      let closed = false;
+      (async () => {
+         const state = await this._services.config.workspaces.state.get(workspaceId);
+         if (closed) {
+            return;
+         }
+
+         if (!(state?.widgets?.length ?? 0)) {
+            callback({ type: ListItemType.InitialEmpty });
+            return;
+         }
+
+         state?.widgets.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
+      })();
+
+      const onUpdate = (c: ListItem<Widget>) => {
+         if (c.type === ListItemType.InitialEmpty) {
+            return;
+         }
+         if (c.item.workspaceId !== workspaceId) {
+            return;
+         }
+         this.debug('Got workspaceWidgetList update');
+         callback(c);
+      };
+
+      this._workspaceWidgetUpdated.on('workspace-widget-updated', onUpdate);
+
+      return () => {
+         this.debug('Closing workspaceWidgetList');
+         closed = true;
+         this._workspaceWidgetUpdated.off('workspace-widget-updated', onUpdate);
+      };
+   }
+
+   public async configWorkspaceWidgetPut(widget: Widget): Promise<void> {
+      const state = (await this._services.config.workspaces.state.get(widget.workspaceId)) ?? { widgets: [] };
+      const existingIndex = state.widgets.findIndex((c) => c.id === widget.id);
+      if (existingIndex === -1) {
+         state.widgets.push(widget);
+      }
+      {
+         state.widgets[existingIndex] = widget;
+      }
+      await this._services.config.workspaces.state.update(widget.workspaceId, state);
+      this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Update, item: widget });
+   }
+
+   public async configWorkspaceWidgetDelete(widget: Widget): Promise<void> {
+      const state = (await this._services.config.workspaces.state.get(widget.workspaceId)) ?? { widgets: [] };
+      const existingIndex = state.widgets.findIndex((c) => c.id === widget.id);
+      if (existingIndex === -1) {
+         throw new Error('Widget not found');
+      }
+      {
+         state.widgets.splice(existingIndex, 1);
+      }
+      await this._services.config.workspaces.state.update(widget.workspaceId, state);
+      this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Delete, item: widget });
    }
 
    private readonly _databaseUpdated = new ev.EventEmitter<'database-updated', ListItem<Database>>();
@@ -126,7 +226,13 @@ export class RpcService implements RpcServiceInterface {
             return d;
          });
          this._services.cache.update(cacheKey, dbs);
-         dbs.forEach((d) => callback({ type: ListItemType.Initial, item: d }));
+
+         if (!dbs.length) {
+            callback({ type: ListItemType.InitialEmpty });
+         } else {
+            dbs.forEach((d) => callback({ type: ListItemType.Initial, item: d }));
+         }
+
          realSent = true;
       })();
 
