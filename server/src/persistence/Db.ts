@@ -35,6 +35,19 @@ export class Db {
    public delete(key: string): Promise<void> {
       return this._level.del(key);
    }
+
+   public async *iterator(prefix?: string): AsyncGenerator<any> {
+      const lte = prefix ? prefix + '~' : undefined;
+      const iter = this._level.iterator({
+         gte: prefix,
+         lte,
+      }) as any;
+
+      for await (const [_key, value] of iter) {
+         const obj = JSON.parse(value);
+         yield obj;
+      }
+   }
 }
 
 export class DbNamespace<T = any> {
@@ -68,5 +81,10 @@ export class DbNamespace<T = any> {
    public delete(key: string): Promise<void> {
       const fullKey = `${this.name}|${key}`;
       return this._parent.delete(fullKey);
+   }
+
+   public iterator(prefix?: string): AsyncGenerator<T> {
+      const fullKey = `${this.name}|${prefix ?? ''}`;
+      return this._parent.iterator(fullKey);
    }
 }

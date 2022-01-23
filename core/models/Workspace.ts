@@ -5,7 +5,3 @@ export interface Workspace {
   name: string;
   description: string;
 }
-
-export interface WorkspaceState {
-  widgets: Widget[];
-}

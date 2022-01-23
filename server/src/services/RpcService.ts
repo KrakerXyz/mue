@@ -139,6 +139,16 @@ export class RpcService implements RpcServiceInterface {
          throw new Error('Workspace not found');
       }
       workspaces.splice(existingIndex, 1);
+
+      const wsWidgets: Widget[] = [];
+      const widgets = this._services.config.workspaces.widget.list();
+      for await (const w of widgets) {
+         if (w.workspaceId === workspace.id) {
+            wsWidgets.push(w);
+         }
+      }
+      wsWidgets.forEach((w) => this._services.config.workspaces.widget.delete(w.id));
+
       await this._services.config.workspaces.update(workspaces);
       this._workspaceUpdated.emit('workspace-updated', { type: ListItemType.Delete, item: workspace });
    }
@@ -148,17 +158,24 @@ export class RpcService implements RpcServiceInterface {
       this.debug('Starting workspaceWidgetList');
       let closed = false;
       (async () => {
-         const state = await this._services.config.workspaces.state.get(workspaceId);
+         const widgets = this._services.config.workspaces.widget.list();
          if (closed) {
             return;
          }
 
-         if (!(state?.widgets?.length ?? 0)) {
+         let hadOne = false;
+         for await (const w of widgets) {
+            if (w.workspaceId !== workspaceId) {
+               continue;
+            }
+            callback({ type: ListItemType.Initial, item: w });
+            hadOne = true;
+         }
+
+         if (!hadOne) {
             callback({ type: ListItemType.InitialEmpty });
             return;
          }
-
-         state?.widgets.forEach((c) => callback({ type: ListItemType.Initial, item: c }));
       })();
 
       const onUpdate = (c: ListItem<Widget>) => {
@@ -184,30 +201,14 @@ export class RpcService implements RpcServiceInterface {
    }
 
    public async configWorkspaceWidgetPut(widget: Widget): Promise<void> {
-      const state = (await this._services.config.workspaces.state.get(widget.workspaceId)) ?? { widgets: [] };
-      const existingIndex = state.widgets.findIndex((c) => c.id === widget.id);
-      if (existingIndex === -1) {
-         state.widgets.push(widget);
-      }
-      {
-         state.widgets[existingIndex] = widget;
-      }
       this.debug(`Update widget ${widget.id}`);
-      await this._services.config.workspaces.state.update(widget.workspaceId, state);
+      await this._services.config.workspaces.widget.update(widget);
       this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Update, item: widget });
    }
 
    public async configWorkspaceWidgetDelete(widget: Widget): Promise<void> {
-      const state = (await this._services.config.workspaces.state.get(widget.workspaceId)) ?? { widgets: [] };
-      const existingIndex = state.widgets.findIndex((c) => c.id === widget.id);
-      if (existingIndex === -1) {
-         throw new Error('Widget not found');
-      }
-      {
-         state.widgets.splice(existingIndex, 1);
-      }
       this.debug(`Deleting widget ${widget.id}`);
-      await this._services.config.workspaces.state.update(widget.workspaceId, state);
+      await this._services.config.workspaces.widget.delete(widget.id);
       this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Delete, item: widget });
    }
 
