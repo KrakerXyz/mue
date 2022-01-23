@@ -13,7 +13,8 @@ export type WidgetName =
   | "databases"
   | "collections"
   | "query"
-  | "workspaces";
+  | "workspaces"
+  | "copy";
 
 export interface Widget<TName extends WidgetName = any> {
   id: string;
@@ -50,4 +51,11 @@ export type WidgetProps<TName extends WidgetName> = TName extends "connections"
     }
   : TName extends "workspaces"
   ? undefined
+  : TName extends "copy"
+  ? {
+      fromConnection?: string;
+      fromDatabase?: string;
+      toConnection?: string;
+      toDatabase?: string;
+    }
   : never;

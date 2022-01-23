@@ -7,3 +7,4 @@ export * from './workspaces';
 export * from './ResultContextManager';
 export * from './EventEmitter';
 export * from './wrapRpcAsyncEnumerable';
+export * from './windowListener';

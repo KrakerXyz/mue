@@ -34,22 +34,37 @@
 
       <template #body>
          <div v-if="dbs" class="list-group list-group-flush h-100 overflow-auto">
-            <button class="list-group-item list-group-item-action" v-for="db of dbs" :key="db.key" @click="dbSelected(db)">
+            <button
+               class="list-group-item list-group-item-action"
+               v-for="db of dbs"
+               :key="db.key"
+               @click="dbSelected(db)"
+               @contextmenu.prevent="setContextMenu(db.contextMenu, $event)"
+            >
                <div class="row">
-                  <div class="col text-truncate font-monospace">{{ db.databaseName }}</div>
+                  <div class="col text-truncate font-monospace">{{ db.database }}</div>
                   <div class="col-auto">
-                     <v-connection-badge :name="db.connectionName"></v-connection-badge>
+                     <v-connection-badge :name="db.connection"></v-connection-badge>
                   </div>
                </div>
             </button>
          </div>
+         <div ref="contextMenuEl" class="context-menu list-group shadow" v-if="contextMenu">
+            <button class="list-group-item list-group-item-action" :class="item.css" v-for="item of contextMenu" :key="item.id" @click="item.action()">
+               {{ item.text }}
+            </button>
+         </div>
+         <v-confirmation-modal v-if="confirmationVm" @cancel="confirmationVm = undefined" @confirm="confirmationVm?.callback()">
+            <h3>Confirm Delete</h3>
+            {{ confirmationVm.text }}
+         </v-confirmation-modal>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { useConnections, useRpc, WidgetManager } from '@/services';
-   import { defineComponent, watch, ref, computed, onUnmounted } from 'vue';
+   import { useConnections, useRpc, useWindowListener, WidgetManager } from '@/services';
+   import { defineComponent, watch, ref, computed, onUnmounted, nextTick } from 'vue';
    import { Widget, Database } from '@core/models';
    import { ListItemType, Subscription } from '@core/RpcService';
 
@@ -96,7 +111,7 @@
 
          const unsub = () => {
             subsProm?.then((subs) => {
-               subs.forEach((s) => s());
+               subs.forEach((s) => s.unsubscribe());
             });
          };
 
@@ -110,8 +125,13 @@
                }
                const newSubs = connections.map((c) =>
                   rpc.mongoDatabaseList(c.name, (dbItem) => {
+                     if (dbItem.type === ListItemType.InitialEmpty) {
+                        rawDbs.value = [];
+                        return;
+                     }
+
                      const newList = [...rawDbs.value];
-                     const existingIndex = newList.findIndex((d) => d.name === dbItem.item.name);
+                     const existingIndex = newList.findIndex((d) => d.connection === dbItem.item.connection && d.name === dbItem.item.name);
                      if (dbItem.type === ListItemType.Delete) {
                         if (existingIndex !== -1) {
                            newList.splice(existingIndex, 1);
@@ -145,24 +165,105 @@
             return rawDbs.value
                .filter((d) => !connectionFilters.value || connectionFilters.value.includes(d.connection))
                .filter((d) => !nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower))
-               .map((d) => ({ key: `${d.connection}-${d.name}`, connectionName: d.connection, databaseName: d.name }))
-               .sort((a, b) => a.databaseName.localeCompare(b.databaseName) || a.connectionName.localeCompare(b.connectionName));
+               .sort((a, b) => a.name.localeCompare(b.name) || a.connection.localeCompare(b.connection))
+               .map((d) => {
+                  const vm: DatabaseVm = {
+                     key: `${d.connection}-${d.name}`,
+                     connection: d.connection,
+                     database: d.name,
+                     contextMenu: [
+                        {
+                           id: 'copy',
+                           text: 'Copy to',
+                           action: () => {
+                              props.widgetManager.add('copy', { fromConnection: d.connection, fromDatabase: d.name });
+                           },
+                        },
+                        {
+                           id: 'delete',
+                           text: 'Delete',
+                           css: ['list-group-item-danger'],
+                           action: () => {
+                              confirmationVm.value = {
+                                 text: `Are you sure you want to delete ${d.name} from ${d.connection}?`,
+                                 callback: () => {
+                                    rpc.mongoDatabaseDelete(d).then(() => console.debug(`Deleted ${d.name}`));
+                                    confirmationVm.value = undefined;
+                                 },
+                              };
+                           },
+                        },
+                     ],
+                  };
+                  return vm;
+               });
          });
 
-         const dbSelected = (db: SelectedDatabase) => {
+         const dbSelected = (db: DatabaseVm) => {
             props.widgetManager.add('collections', {
-               connection: db.connectionName,
-               database: db.databaseName,
+               connection: db.connection,
+               database: db.database,
             } as any);
          };
 
-         return { dbs, newNameFilter, dbSelected, connectionNames, toggleConnection, connectionFilters };
+         const windowClickSub = useWindowListener('click', () => {
+            contextMenu.value = null;
+         });
+         onUnmounted(() => windowClickSub());
+
+         const contextMenu = ref<ContextOption[] | null>(null);
+         const contextMenuEl = ref<HTMLDivElement>();
+         const setContextMenu = async (menu: ContextOption[] | null, evt: MouseEvent) => {
+            contextMenu.value = menu;
+            await nextTick();
+            if (!contextMenuEl.value) {
+               return;
+            }
+            contextMenuEl.value.style.top = `${evt.y}px`;
+            contextMenuEl.value.style.left = `${evt.x}px`;
+         };
+
+         const confirmationVm = ref<ConfirmationVm>();
+
+         return {
+            dbs,
+            newNameFilter,
+            dbSelected,
+            connectionNames,
+            toggleConnection,
+            connectionFilters,
+            contextMenu,
+            setContextMenu,
+            contextMenuEl,
+            confirmationVm,
+         };
       },
    });
 
-   export interface SelectedDatabase {
+   interface DatabaseVm {
       key: string;
-      connectionName: string;
-      databaseName: string;
+      connection: string;
+      database: string;
+      contextMenu: ContextOption[] | null;
+   }
+
+   type ContextOption = {
+      id: string;
+      text: string;
+      css?: string[];
+      action: () => void;
+   };
+
+   interface ConfirmationVm {
+      text: string;
+      callback: () => void;
    }
 </script>
+
+<style lang="postcss" scoped>
+   .context-menu {
+      position: fixed;
+      z-index: 1;
+      min-width: 200px;
+   }
+</style>

@@ -14,35 +14,33 @@ export function useWorkspaces(): Ref<Workspace[] | undefined> {
 
    const rpc = useRpc();
 
-   Promise.resolve(
-      rpc.configWorkspaceList((listItem) => {
-         if (!r) {
+   rpc.configWorkspaceList((listItem) => {
+      if (!r) {
+         return;
+      }
+
+      if (listItem.type === ListItemType.InitialEmpty) {
+         r.value = [];
+         return;
+      }
+
+      const newArr = [...(r.value ?? [])];
+
+      const existingIndex = newArr.findIndex((c) => c.name === listItem.item.name);
+      if (listItem.type === ListItemType.Delete) {
+         if (existingIndex === -1) {
+            console.warn('Deleted workspace does not exist');
             return;
          }
-
-         if (listItem.type === ListItemType.InitialEmpty) {
-            r.value = [];
-            return;
-         }
-
-         const newArr = [...(r.value ?? [])];
-
-         const existingIndex = newArr.findIndex((c) => c.name === listItem.item.name);
-         if (listItem.type === ListItemType.Delete) {
-            if (existingIndex === -1) {
-               console.warn('Deleted workspace does not exist');
-               return;
-            }
-            newArr.splice(existingIndex, 1);
-         } else if (existingIndex !== -1) {
-            newArr.splice(existingIndex, 1, listItem.item);
-         } else {
-            newArr.push(listItem.item);
-            newArr.sort((a, b) => a.name.localeCompare(b.name));
-         }
-         r.value = newArr;
-      })
-   ).then((sub) => {
+         newArr.splice(existingIndex, 1);
+      } else if (existingIndex !== -1) {
+         newArr.splice(existingIndex, 1, listItem.item);
+      } else {
+         newArr.push(listItem.item);
+         newArr.sort((a, b) => a.name.localeCompare(b.name));
+      }
+      r.value = newArr;
+   }).then((sub) => {
       (thisR as any)[Symbol('subscription')] = sub;
    });
 

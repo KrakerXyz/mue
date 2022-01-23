@@ -1,7 +1,15 @@
-import { Collection, Connection, Database, Widget, Workspace } from "./models";
+import {
+  Collection,
+  Connection,
+  Database,
+  DatabaseCopyConfig,
+  DatabaseCopyStatus,
+  Widget,
+  Workspace,
+} from "./models";
 import type { QueryRecord, MongoQuery } from "./models/MongoQuery";
 
-export type Subscription = () => void;
+export type Subscription = { unsubscribe: () => void };
 export enum ListItemType {
   Cache,
   Initial,
@@ -36,6 +44,11 @@ export interface RpcService {
   mongoDatabaseList(
     connection: string,
     callback: (database: ListItem<Database>) => void
+  ): Subscription;
+  mongoDatabaseDelete(database: Database): Promise<void>;
+  mongoDatabaseCopy(
+    config: DatabaseCopyConfig,
+    statusCallback: (status: DatabaseCopyStatus) => void
   ): Subscription;
 
   mongoCollectionList(

@@ -4,3 +4,4 @@ build
 .env*
 *.cache
 server/.level
+server/db-backup

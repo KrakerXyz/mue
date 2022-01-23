@@ -1,4 +1,8 @@
+import { spawn } from 'child_process';
 import ev from 'eventemitter3';
+import { mkdir } from 'fs/promises';
+import path from 'path';
+const __dirname = path.resolve();
 import {
    Collection,
    Connection,
@@ -11,8 +15,10 @@ import {
    ListItemType,
    RpcService as RpcServiceInterface,
    Subscription,
+   DatabaseCopyConfig,
+   DatabaseCopyStatus,
 } from '../../../core/index.js';
-import { getConnection, WorkspaceServices } from './index.js';
+import { getMongoClient, WorkspaceServices } from './index.js';
 
 export class RpcService implements RpcServiceInterface {
    private readonly verbose = true;
@@ -44,10 +50,12 @@ export class RpcService implements RpcServiceInterface {
 
       this._connectionUpdated.on('connection-updated', onUpdate);
 
-      return () => {
-         this.debug('Closing connectionList');
-         closed = true;
-         this._connectionUpdated.off('connection-updated', onUpdate);
+      return {
+         unsubscribe: () => {
+            this.debug('Closing connectionList');
+            closed = true;
+            this._connectionUpdated.off('connection-updated', onUpdate);
+         },
       };
    }
 
@@ -102,10 +110,12 @@ export class RpcService implements RpcServiceInterface {
 
       this._workspaceUpdated.on('workspace-updated', onUpdate);
 
-      return () => {
-         this.debug('Closing workspaceList');
-         closed = true;
-         this._workspaceUpdated.off('workspace-updated', onUpdate);
+      return {
+         unsubscribe: () => {
+            this.debug('Closing workspaceList');
+            closed = true;
+            this._workspaceUpdated.off('workspace-updated', onUpdate);
+         },
       };
    }
 
@@ -164,10 +174,12 @@ export class RpcService implements RpcServiceInterface {
 
       this._workspaceWidgetUpdated.on('workspace-widget-updated', onUpdate);
 
-      return () => {
-         this.debug('Closing workspaceWidgetList');
-         closed = true;
-         this._workspaceWidgetUpdated.off('workspace-widget-updated', onUpdate);
+      return {
+         unsubscribe: () => {
+            this.debug('Closing workspaceWidgetList');
+            closed = true;
+            this._workspaceWidgetUpdated.off('workspace-widget-updated', onUpdate);
+         },
       };
    }
 
@@ -199,6 +211,7 @@ export class RpcService implements RpcServiceInterface {
       this._workspaceWidgetUpdated.emit('workspace-widget-updated', { type: ListItemType.Delete, item: widget });
    }
 
+   private readonly _databaseUpdated = new ev.EventEmitter<'database-updated', ListItem<Database>>();
    public mongoDatabaseList(connection: string, callback: (database: ListItem<Database>) => void): Subscription {
       this.debug('Starting databaseList');
       let closed = false;
@@ -222,7 +235,7 @@ export class RpcService implements RpcServiceInterface {
          if (closed) {
             return;
          }
-         const mClient = await getConnection(con.connectionString);
+         const mClient = await getMongoClient(con.connectionString);
          if (closed) {
             return;
          }
@@ -248,10 +261,41 @@ export class RpcService implements RpcServiceInterface {
          realSent = true;
       })();
 
-      return () => {
-         this.debug('Closing databaseList');
-         closed = true;
+      const onUpdate = (c: ListItem<Database>) => {
+         this.debug('Got databaseList update');
+         callback(c);
       };
+
+      this._databaseUpdated.on('database-updated', onUpdate);
+
+      return {
+         unsubscribe: () => {
+            this.debug('Closing databaseList');
+            closed = true;
+            this._databaseUpdated.off('database-updated', onUpdate);
+         },
+      };
+   }
+
+   public async mongoDatabaseDelete(database: Database): Promise<void> {
+      this.debug(`Dropping db ${database.name} from ${database.connection}`);
+      const connections = await this._services.config.connections.list();
+      const con = connections?.find((x) => x.name === database.connection);
+      if (!con) {
+         throw new Error(`Connection ${database.connection} not found`);
+      }
+
+      const client = await getMongoClient(con.connectionString);
+
+      const db = client.db(database.name);
+      const dropped = await db.dropDatabase();
+
+      if (!dropped) {
+         throw new Error(`Could not drop db ${database.name}`);
+      } else {
+         this._services.cache.delete(`databaseList-${database.connection}`);
+         this._databaseUpdated.emit('database-updated', { type: ListItemType.Delete, item: database });
+      }
    }
 
    public mongoCollectionList(connection: string, database: string, callback: (database: ListItem<Collection>) => void): Subscription {
@@ -277,7 +321,7 @@ export class RpcService implements RpcServiceInterface {
          if (closed) {
             return;
          }
-         const mClient = await getConnection(con.connectionString);
+         const mClient = await getMongoClient(con.connectionString);
          if (closed) {
             return;
          }
@@ -308,9 +352,100 @@ export class RpcService implements RpcServiceInterface {
          realSent = true;
       })();
 
-      return () => {
-         this.debug('Closing collectionList');
-         closed = true;
+      return {
+         unsubscribe: () => {
+            this.debug('Closing collectionList');
+            closed = true;
+         },
+      };
+   }
+
+   public mongoDatabaseCopy(config: DatabaseCopyConfig, statusCallback: (status: DatabaseCopyStatus) => void): Subscription {
+      (async () => {
+         this.debug(`Starting db copy from ${config.fromDatabase} -> ${config.toDatabase}`);
+         const connections = await this._services.config.connections.list();
+         const fromCon = connections?.find((c) => c.name === config.fromConnection);
+         if (!fromCon) {
+            throw new Error(`Connection ${config.fromConnection} does not exist`);
+         }
+         const toCon = connections?.find((c) => c.name === config.toConnection);
+         if (!toCon) {
+            throw new Error(`Connection ${config.toConnection} does not exist`);
+         }
+
+         const today = new Date();
+         const todayString = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+
+         const localDbName = `${config.fromDatabase}${todayString}`;
+
+         const dir = `${__dirname}\\db-backup\\${config.fromConnection}`;
+         await mkdir(dir, { recursive: true });
+         const mongodump = `${__dirname}\\db-backup\\mongodump`;
+         const dumpArgs = [`/uri:${fromCon.connectionString}`, `/db:${config.fromDatabase}`, '/gzip', `/archive:${dir}\\${localDbName}`];
+
+         this.debug(`Starting ${config.fromDatabase} dump`);
+         statusCallback({ status: 'Starting dump' });
+
+         await new Promise<void>((r) => {
+            const proc = spawn(mongodump, dumpArgs);
+            proc.stdout.on('data', (d) => {
+               statusCallback({ status: d.toString() });
+            });
+
+            proc.stderr.on('data', (er) => {
+               statusCallback({ status: er.toString() });
+            });
+
+            proc.on('close', () => {
+               statusCallback({ status: 'Dump done' });
+               r();
+            });
+         });
+
+         this.debug(`Dump finished, starting restore for ${config.toDatabase}`);
+
+         const mongorestore = `${__dirname}\\db-backup\\mongorestore`;
+         const restoreArgs = [
+            '/drop',
+            '/gzip',
+            `/archive:${dir}\\${localDbName}`,
+            `/nsFrom:${config.fromDatabase}`,
+            `/nsTo:${config.toDatabase}`,
+            `/uri:${toCon.connectionString}`,
+         ];
+
+         statusCallback({ status: 'Starting restore' });
+
+         await new Promise<void>((r) => {
+            const proc = spawn(mongorestore, restoreArgs);
+            proc.stdout.on('data', (d) => {
+               statusCallback({ status: d.toString() });
+            });
+
+            proc.stderr.on('data', (er) => {
+               statusCallback({ status: er.toString() });
+            });
+
+            proc.on('close', () => {
+               statusCallback({ status: 'Restore done' });
+               r();
+            });
+         });
+
+         this.debug(`Restore for ${config.toDatabase} finished`);
+
+         const database: Database = {
+            connection: config.toConnection,
+            name: config.toDatabase,
+         };
+         this._services.cache.delete(`databaseList-${config.toConnection}`);
+         this._databaseUpdated.emit('database-updated', { type: ListItemType.Update, item: database });
+      })();
+
+      return {
+         unsubscribe: () => {
+            /** */
+         },
       };
    }
 
@@ -322,7 +457,7 @@ export class RpcService implements RpcServiceInterface {
          if (!connection) {
             throw new Error(`Connection for ${q.connection} not found`);
          }
-         const client = await getConnection(connection.connectionString);
+         const client = await getMongoClient(connection.connectionString);
          const db = client.db(q.database);
          const col = db.collection(q.collection);
          const command = col[q.command].bind(col);

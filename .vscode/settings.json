@@ -4,6 +4,8 @@
     "EJSON",
     "FAKZ",
     "jlytg",
+    "mongodump",
+    "mongorestore",
     "nesw",
     "pino",
     "postcss",

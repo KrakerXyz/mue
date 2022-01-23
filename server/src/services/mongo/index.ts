@@ -1,1 +1,1 @@
-export * from './Connection.js';
+export * from './getMongoClient.js';

@@ -81,7 +81,7 @@
             cols.value = newArr;
          });
 
-         onUnmounted(() => Promise.resolve(colSubscription).then((sub) => sub()));
+         onUnmounted(() => colSubscription.then((sub) => sub()));
 
          const nameFilter = ref<string>();
 
