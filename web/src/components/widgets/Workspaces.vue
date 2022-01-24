@@ -29,7 +29,7 @@
                      <input class="form-control" v-model="w.workspace.name" />
                   </div>
                   <div class="col-auto">
-                     <button class="btn p-0 text-success" @click="saveWorkspaces()"><i class="fal fa-save"></i></button>
+                     <button class="btn p-0 text-success" @click="saveEdit()"><i class="fal fa-save"></i></button>
                   </div>
                   <div class="col-auto">
                      <button class="btn p-0" @click="setEdit(null)"><i class="fal fa-times-square"></i></button>
@@ -61,7 +61,7 @@
 
 <script lang="ts">
    import { computed, defineComponent, reactive, ref } from 'vue';
-   import { useSelectedWorkspaceId, useWorkspaces, useWs, WidgetManager } from '@/services';
+   import { useRpc, useSelectedWorkspaceId, useWorkspaces, WidgetManager } from '@/services';
    import { Widget, Workspace } from '@core/models';
    import { deepClone } from '@core/util';
    import { v4 } from 'uuid';
@@ -73,7 +73,7 @@
       },
       setup() {
          const workspaces = useWorkspaces();
-         const ws = useWs();
+         const rpc = useRpc();
          const selectedWorkspaceId = useSelectedWorkspaceId();
 
          const workspaceVms = computed(() => {
@@ -106,20 +106,9 @@
                return;
             }
             workspaceVms.value.splice(index, 1);
-            saveWorkspaces();
-            confirmDelete.value = undefined;
-         };
-
-         const saveWorkspaces = () => {
-            if (!workspaceVms.value) {
-               return;
-            }
-            const spaces = workspaceVms.value.map((w) => w.workspace);
-            ws.command({
-               name: 'command.config.workspaces.update',
-               workspaces: spaces,
-            });
+            rpc.configWorkspaceDelete(confirmDelete.value.workspace);
             setEdit(null);
+            confirmDelete.value = undefined;
          };
 
          const newWorkspace = ref<WorkspaceVm>(
@@ -143,7 +132,8 @@
                return;
             }
             workspaceVms.value.push(deepClone(newWorkspace.value));
-            saveWorkspaces();
+            rpc.configWorkspacePut(newWorkspace.value.workspace);
+            setEdit(null);
             newWorkspace.value = reactive({
                isEditing: false,
                workspace: {
@@ -154,7 +144,16 @@
             });
          };
 
-         return { workspaceVms, confirmDelete, deleteWorkspace, setEdit, saveWorkspaces, newWorkspace, saveNew, isNewValid, selectedWorkspaceId };
+         const saveEdit = () => {
+            const editing = workspaceVms.value.find((w) => w.isEditing);
+            if (!editing) {
+               return;
+            }
+            rpc.configWorkspacePut(editing.workspace);
+            setEdit(null);
+         };
+
+         return { workspaceVms, confirmDelete, deleteWorkspace, setEdit, newWorkspace, saveNew, isNewValid, selectedWorkspaceId, saveEdit };
       },
    });
 

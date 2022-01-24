@@ -1,7 +1,7 @@
 <template>
    <div>
       <div class="row g-2">
-         <div class="col-auto text-success d-flex align-items-center" role="button" @click="contextManager.togglePathExpanded(basePath, resultIndex)">
+         <div class="col-auto text-success" role="button" @click="contextManager.togglePathExpanded(basePath, resultIndex)">
             <i class="fas fa-brackets-curly fa-fw"></i>
          </div>
          <div class="col text-truncate" v-if="!isExpanded">
@@ -49,7 +49,7 @@
          const fields = computed(() => {
             const vms: FieldVm[] = [];
 
-            const fieldNames = Object.getOwnPropertyNames(props.value);
+            const fieldNames = Object.keys(props.value);
             if (props.contextManager.context.sortFields) {
                fieldNames.sort((a, b) => a.localeCompare(b));
             }

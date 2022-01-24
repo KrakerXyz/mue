@@ -10,7 +10,6 @@
                   <span class="fw-bold">
                      {{ database }}<span v-if="parsed">.{{ parsed.collection }}</span>
                   </span>
-                  <span v-if="results?.length" class="ms-2 text-muted">{{ results.length }} result{{ results.length > 1 ? 's' : '' }}</span>
                </div>
                <div v-if="parsed">
                   <span class="text-muted small">{{ parsed.command }}(</span>
@@ -67,7 +66,7 @@
                      <label class="form-check-label" for="hide-empty">Hide Empty</label>
                   </div>
                </div>
-               <div class="col-auto">
+               <!-- <div class="col-auto">
                   <div class="form-check">
                      <input
                         class="form-check-input"
@@ -78,7 +77,7 @@
                      />
                      <label class="form-check-label" for="expand-all">Expand All</label>
                   </div>
-               </div>
+               </div> -->
                <div class="col-auto" v-if="context.hidePaths.length">
                   <div class="hidden-paths position-relative">
                      <span><i class="fal fa-eye"></i> {{ context.hidePaths.length }} hidden paths</span>
@@ -112,35 +111,37 @@
                   </button>
                </div>
             </div>
-            <v-virtual-list :items="results ?? []" class="overflow-auto list-group flex-grow-1 font-monospace">
-               <template #default="slotProps">
-                  <div class="list-group-item">
-                     <div class="row g-1 align-items-center">
-                        <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
-                        <div class="col overflow-hidden">
-                           <v-object-value
-                              :value="slotProps.item"
-                              :result-index="slotProps.index"
-                              :contextManager="contextManager"
-                              basePath=""
-                           ></v-object-value>
+
+            <template v-if="resultsGenerator">
+               <v-async-list :items="resultsGenerator" class="overflow-auto list-group flex-grow-1 font-monospace">
+                  <template #default="slotProps">
+                     <div class="list-group-item pb-0">
+                        <div class="row g-1">
+                           <div class="col-auto col-index overflow-hidden text-nowrap text-end">{{ slotProps.index }}:</div>
+                           <div class="col overflow-hidden">
+                              <v-object-value
+                                 :value="slotProps.item"
+                                 :result-index="slotProps.index"
+                                 :contextManager="contextManager"
+                                 basePath=""
+                              ></v-object-value>
+                           </div>
                         </div>
                      </div>
-                  </div>
-               </template>
-            </v-virtual-list>
+                  </template>
+               </v-async-list>
+            </template>
          </div>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { ResultContextManager, useWs, WidgetManager } from '@/services';
-   import { Document, QuerySubscription } from '@core/subscriptions';
-   import { computed, defineComponent, markRaw, onUnmounted, reactive, ref, watch, nextTick } from 'vue';
+   import { ResultContextManager, useRpc, WidgetManager, wrapRpcAsyncEnumerable } from '@/services';
+   import { computed, defineComponent, markRaw, reactive, ref, watch } from 'vue';
    import JSON5 from 'json5';
    import { deepClone } from '@core/util';
-   import { QueryWidgetResultContext, Widget, defaultResultContext } from '@core/models';
+   import { QueryWidgetResultContext, Widget, defaultResultContext, MongoQuery, QueryRecord } from '@core/models';
 
    export default defineComponent({
       props: {
@@ -154,7 +155,7 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
+         const rpc = useRpc();
 
          const queryString = ref<string>(props.query ?? `db.getCollection('${props.collection}').find({})`);
 
@@ -173,8 +174,7 @@
                return undefined;
             }
 
-            const msg: QuerySubscription = {
-               name: 'subscription.mongo.query',
+            const msg: MongoQuery = {
                connection: props.connection,
                database: props.database,
                collection: match[1],
@@ -197,17 +197,11 @@
 
          const invalid = computed(() => !parsed.value);
 
-         // eslint-disable-next-line no-undef
-         let sub: ZenObservable.Subscription | null = null;
-
          const isRunning = ref(false);
-         const results = ref<Record<string, any>[]>();
 
-         const exec = () => {
-            if (sub) {
-               sub.unsubscribe();
-               sub = null;
-            }
+         const resultsGenerator = ref<AsyncGenerator<QueryRecord>>();
+
+         const exec = async () => {
             if (!parsed.value) {
                return;
             }
@@ -217,23 +211,19 @@
                return;
             }
 
-            results.value = undefined;
             isRunning.value = true;
 
-            const now = Date.now();
-            const obs = ws.subscribe(parsed.value);
-            const rawResults: Record<string, any>[] = markRaw([]);
+            const thisParsed = parsed.value;
 
-            sub = obs.subscribe((d) => {
-               for (const r of d.results) {
-                  rawResults.push(r);
-               }
-               if (d.complete) {
-                  console.debug(`Finished query in ${Date.now() - now}ms with ${rawResults.length} records`);
-                  results.value = rawResults;
-                  isRunning.value = false;
-               }
-            });
+            console.debug('Getting query iterator');
+            const queryResult = await rpc.mongoQuery(thisParsed);
+
+            const wrappedResult = markRaw(wrapRpcAsyncEnumerable(queryResult));
+
+            console.debug('Iterator received');
+            resultsGenerator.value = wrappedResult;
+
+            isRunning.value = false;
          };
 
          const context: QueryWidgetResultContext = reactive({
@@ -254,7 +244,7 @@
 
          watch(
             context,
-            (c) => {
+            async (c) => {
                props.widgetManager.updateProps<'query'>(props.widget, { resultContext: c });
             },
             { deep: true }
@@ -265,21 +255,10 @@
          }
 
          const setContextProperty = async (prop: keyof QueryWidgetResultContext, value: any) => {
-            const tmpResults = results.value;
-            results.value = [];
-            await nextTick();
             (context as any)[prop] = value;
-
-            await nextTick();
-            results.value = tmpResults;
          };
 
-         onUnmounted(() => {
-            sub?.unsubscribe();
-            console.debug('Query.vue unmounted');
-         });
-
-         return { queryString, invalid, exec, isRunning, context, parsed, showPath, results, contextManager, setContextProperty };
+         return { queryString, invalid, exec, isRunning, context, parsed, showPath, resultsGenerator, contextManager, setContextProperty };
       },
    });
 </script>

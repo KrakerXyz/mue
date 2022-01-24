@@ -52,7 +52,7 @@
 </template>
 
 <script lang="ts">
-   import { useConnections, useWs, WidgetManager } from '@/services';
+   import { useConnections, useRpc, WidgetManager } from '@/services';
    import { Connection, Widget } from '@core/models';
    import { computed, defineComponent, reactive, ref } from 'vue';
 
@@ -62,11 +62,11 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
+         const rpc = useRpc();
 
          const connections = useConnections();
 
-         const newConnection = reactive<Connection>({ name: '', connectionString: 'mongodb+srv://' });
+         const newConnection = reactive<Connection>({ name: '', connectionString: 'mongodb://' });
 
          const isNewValid = computed(
             () =>
@@ -78,11 +78,7 @@
          const isSaving = ref(false);
          const addConnection = async () => {
             isSaving.value = true;
-            const copy = [...(connections.value ?? []), { ...newConnection }];
-            await ws.command({
-               name: 'command.config.connections.update',
-               connections: copy,
-            });
+            await rpc.configConnectionPut(newConnection);
             newConnection.name = '';
             newConnection.connectionString = 'mongodb://';
             isSaving.value = false;
@@ -93,16 +89,12 @@
             if (!confirmDelete.value || !connections.value) {
                return;
             }
-            const newConnections = connections.value.filter((c) => c !== confirmDelete.value);
-            await ws.command({
-               name: 'command.config.connections.update',
-               connections: newConnections,
-            });
+            await rpc.configConnectionDelete(confirmDelete.value);
             confirmDelete.value = undefined;
          };
 
          const openDatabases = (con: Connection) => {
-            props.widgetManager.add('databases', { connections: [con.name] });
+            props.widgetManager.add('databases', { connections: [con.name], nameFilter: null });
          };
 
          return { connections, newConnection, isNewValid, addConnection, isSaving, confirmDelete, deleteConnection, openDatabases };

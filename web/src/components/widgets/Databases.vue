@@ -34,24 +34,39 @@
 
       <template #body>
          <div v-if="dbs" class="list-group list-group-flush h-100 overflow-auto">
-            <button class="list-group-item list-group-item-action" v-for="db of dbs" :key="db.key" @click="dbSelected(db)">
+            <button
+               class="list-group-item list-group-item-action"
+               v-for="db of dbs"
+               :key="db.key"
+               @click="dbSelected(db)"
+               @contextmenu.prevent="setContextMenu(db.contextMenu, $event)"
+            >
                <div class="row">
-                  <div class="col text-truncate font-monospace">{{ db.databaseName }}</div>
+                  <div class="col text-truncate font-monospace">{{ db.database }}</div>
                   <div class="col-auto">
-                     <v-connection-badge :name="db.connectionName"></v-connection-badge>
+                     <v-connection-badge :name="db.connection"></v-connection-badge>
                   </div>
                </div>
             </button>
          </div>
+         <div ref="contextMenuEl" class="context-menu list-group shadow" v-if="contextMenu">
+            <button class="list-group-item list-group-item-action" :class="item.css" v-for="item of contextMenu" :key="item.id" @click="item.action()">
+               {{ item.text }}
+            </button>
+         </div>
+         <v-confirmation-modal v-if="confirmationVm" @cancel="confirmationVm = undefined" @confirm="confirmationVm?.callback()">
+            <h3>Confirm Delete</h3>
+            {{ confirmationVm.text }}
+         </v-confirmation-modal>
       </template>
    </v-widget-template>
 </template>
 
 <script lang="ts">
-   import { observableJoin, useSubscriptionRef, useWs, WidgetManager } from '@/services';
-   import { DatabaseListData } from '@core/subscriptions';
-   import { defineComponent, watch, ref, computed, onUnmounted } from 'vue';
-   import { Widget } from '@core/models';
+   import { useConnections, useRpc, useWindowListener, WidgetManager } from '@/services';
+   import { defineComponent, watch, ref, computed, onUnmounted, nextTick } from 'vue';
+   import { Widget, Database } from '@core/models';
+   import { ListItemType, Subscription } from '@core/RpcService';
 
    export default defineComponent({
       props: {
@@ -62,17 +77,11 @@
          widgetManager: { type: Object as () => WidgetManager, required: true },
       },
       setup(props) {
-         const ws = useWs();
+         const rpc = useRpc();
 
-         const connections = useSubscriptionRef(
-            ws
-               .subscribe({
-                  name: 'subscription.config.connections.list',
-               })
-               .map((d) => d.connections)
-         );
+         const connections = useConnections();
 
-         const connectionNames = computed(() => connections.value?.map((c) => c.name).sort((a, b) => a.localeCompare(b)));
+         const connectionNames = computed(() => connections.value?.map((c) => c.name));
 
          const connectionFilters = ref<string[] | undefined>(props.connections);
          watch(
@@ -95,38 +104,54 @@
             }
          };
 
-         const databaseLists$Array = computed(() => {
-            if (!connections.value) {
-               return [];
-            }
-            return connections.value.map((c) => {
-               return ws.subscribe({
-                  name: 'subscription.mongo.server.databases.list',
-                  connection: c.name,
-               });
-            });
-         });
-
-         const allDbs$ = computed(() => {
-            return observableJoin(databaseLists$Array.value);
-         });
-
-         const rawDbs = ref<DatabaseListData[]>([]);
+         const rawDbs = ref<Database[]>([]);
 
          // eslint-disable-next-line no-undef
-         let sub: ZenObservable.Subscription | undefined;
-         watch(allDbs$, (dbs$) => {
-            if (sub) {
-               sub.unsubscribe();
-            }
-            sub = dbs$.subscribe((data) => {
-               const newArr = rawDbs.value.filter((d) => d.connection !== data.connection);
-               newArr.push(data);
-               rawDbs.value = newArr;
-            });
-         });
+         let subsProm: Promise<Subscription[]> | undefined;
 
-         onUnmounted(() => sub?.unsubscribe());
+         const unsub = () => {
+            subsProm?.then((subs) => {
+               subs.forEach((s) => s.unsubscribe());
+            });
+         };
+
+         watch(
+            connections,
+            (connections) => {
+               unsub();
+               subsProm = undefined;
+               if (!connections) {
+                  return;
+               }
+               const newSubs = connections.map((c) =>
+                  rpc.mongoDatabaseList(c.name, (dbItem) => {
+                     if (dbItem.type === ListItemType.InitialEmpty) {
+                        rawDbs.value = [];
+                        return;
+                     }
+
+                     const newList = [...rawDbs.value];
+                     const existingIndex = newList.findIndex((d) => d.connection === dbItem.item.connection && d.name === dbItem.item.name);
+                     if (dbItem.type === ListItemType.Delete) {
+                        if (existingIndex !== -1) {
+                           newList.splice(existingIndex, 1);
+                        }
+                     } else if (existingIndex === -1) {
+                        newList.push(dbItem.item);
+                     } else {
+                        newList[existingIndex] = dbItem.item;
+                     }
+                     rawDbs.value = newList;
+                  })
+               );
+               subsProm = Promise.all(newSubs);
+            },
+            { immediate: true }
+         );
+
+         onUnmounted(() => {
+            unsub();
+         });
 
          const newNameFilter = ref<string>(props.nameFilter ?? '');
 
@@ -139,28 +164,106 @@
             const nameFilterLower = newNameFilter.value.toLocaleLowerCase();
             return rawDbs.value
                .filter((d) => !connectionFilters.value || connectionFilters.value.includes(d.connection))
-               .flatMap((c) =>
-                  c.databases
-                     .filter((d) => !d.empty && (!nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower)))
-                     .map((d) => ({ key: `${c.connection}-${d.name}`, connectionName: c.connection, databaseName: d.name }))
-               )
-               .sort((a, b) => a.databaseName.localeCompare(b.databaseName) || a.connectionName.localeCompare(b.connectionName));
+               .filter((d) => !nameFilterLower || d.name.toLocaleLowerCase().includes(nameFilterLower))
+               .sort((a, b) => a.name.localeCompare(b.name) || a.connection.localeCompare(b.connection))
+               .map((d) => {
+                  const vm: DatabaseVm = {
+                     key: `${d.connection}-${d.name}`,
+                     connection: d.connection,
+                     database: d.name,
+                     contextMenu: [
+                        {
+                           id: 'copy',
+                           text: 'Copy to',
+                           action: () => {
+                              props.widgetManager.add('copy', { fromConnection: d.connection, fromDatabase: d.name });
+                           },
+                        },
+                        {
+                           id: 'delete',
+                           text: 'Delete',
+                           css: ['list-group-item-danger'],
+                           action: () => {
+                              confirmationVm.value = {
+                                 text: `Are you sure you want to delete ${d.name} from ${d.connection}?`,
+                                 callback: () => {
+                                    rpc.mongoDatabaseDelete(d).then(() => console.debug(`Deleted ${d.name}`));
+                                    confirmationVm.value = undefined;
+                                 },
+                              };
+                           },
+                        },
+                     ],
+                  };
+                  return vm;
+               });
          });
 
-         const dbSelected = (db: SelectedDatabase) => {
+         const dbSelected = (db: DatabaseVm) => {
             props.widgetManager.add('collections', {
-               connection: db.connectionName,
-               database: db.databaseName,
+               connection: db.connection,
+               database: db.database,
             } as any);
          };
 
-         return { dbs, newNameFilter, dbSelected, connectionNames, toggleConnection, connectionFilters };
+         const windowClickSub = useWindowListener('click', () => {
+            contextMenu.value = null;
+         });
+         onUnmounted(() => windowClickSub());
+
+         const contextMenu = ref<ContextOption[] | null>(null);
+         const contextMenuEl = ref<HTMLDivElement>();
+         const setContextMenu = async (menu: ContextOption[] | null, evt: MouseEvent) => {
+            contextMenu.value = menu;
+            await nextTick();
+            if (!contextMenuEl.value) {
+               return;
+            }
+            contextMenuEl.value.style.top = `${evt.y}px`;
+            contextMenuEl.value.style.left = `${evt.x}px`;
+         };
+
+         const confirmationVm = ref<ConfirmationVm>();
+
+         return {
+            dbs,
+            newNameFilter,
+            dbSelected,
+            connectionNames,
+            toggleConnection,
+            connectionFilters,
+            contextMenu,
+            setContextMenu,
+            contextMenuEl,
+            confirmationVm,
+         };
       },
    });
 
-   export interface SelectedDatabase {
+   interface DatabaseVm {
       key: string;
-      connectionName: string;
-      databaseName: string;
+      connection: string;
+      database: string;
+      contextMenu: ContextOption[] | null;
+   }
+
+   type ContextOption = {
+      id: string;
+      text: string;
+      css?: string[];
+      action: () => void;
+   };
+
+   interface ConfirmationVm {
+      text: string;
+      callback: () => void;
    }
 </script>
+
+<style lang="postcss" scoped>
+   .context-menu {
+      position: fixed;
+      z-index: 1;
+      min-width: 200px;
+   }
+</style>

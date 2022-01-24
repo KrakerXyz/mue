@@ -1,48 +1,57 @@
 import { QueryWidgetResultContext } from '@core/models';
-import { markRaw } from 'vue';
 
 /** Passed through the result rendering vue to provide access to and to mutate a result context */
 export class ResultContextManager {
-   public constructor(public readonly context: QueryWidgetResultContext) {
-      if (context.results) { markRaw(context.results); }
-   }
+   public constructor(public readonly context: QueryWidgetResultContext) {}
 
    public getSummaryText(value: any, path: string, maxLength: number = 600) {
-
       let json = '';
 
       switch (typeof value) {
-         case 'function': json += 'function()'; break;
-         case 'symbol': json += 'Symbol()'; break;
-         case 'undefined': json += 'undefined'; break;
+         case 'function':
+            json += 'function()';
+            break;
+         case 'symbol':
+            json += 'Symbol()';
+            break;
+         case 'undefined':
+            json += 'undefined';
+            break;
          case 'boolean':
          case 'bigint':
-         case 'number': json += value.toString(); break;
-         case 'string': json += `'${value}'`; break;
+         case 'number':
+            json += value.toString();
+            break;
+         case 'string':
+            json += `'${value}'`;
+            break;
          case 'object': {
-
             if (Array.isArray(value)) {
-
                json += '[';
 
                for (let i = 0; i < value.length; i++) {
                   const thisPath = `${path}[${i}]`;
                   const thisValue = value[i];
-                  if (i) { json += ','; }
+                  if (i) {
+                     json += ',';
+                  }
                   const thisSummary = this.getSummaryText(thisValue, thisPath, maxLength - json.length);
                   json += thisSummary;
-                  if (json.length > maxLength) { break; }
+                  if (json.length > maxLength) {
+                     break;
+                  }
                }
 
                json += ']';
-
             } else {
                json += this.getObjectSummary(value, path, maxLength);
             }
 
             break;
          }
-         default: json += value as never; break;
+         default:
+            json += value as never;
+            break;
       }
 
       return json.substring(0, maxLength);
@@ -50,17 +59,25 @@ export class ResultContextManager {
 
    private getObjectSummary(value: Record<string, any>, path: string, maxLength: number): string {
       let json = '{';
-      const props = Object.getOwnPropertyNames(value);
-      if (this.context.sortFields) { props.sort((a, b) => a.localeCompare(b)); }
+      const props = Object.keys(value);
+      if (this.context.sortFields) {
+         props.sort((a, b) => a.localeCompare(b));
+      }
       for (let i = 0; i < props.length; i++) {
          const p = props[i];
          const thisPath = `${path}.${p}`;
          const thisValue = value[p];
-         if (this.context.hideEmpty && (thisValue === null || thisValue === undefined || thisValue === '')) { continue; }
-         if (i) { json += ','; }
+         if (this.context.hideEmpty && (thisValue === null || thisValue === undefined || thisValue === '')) {
+            continue;
+         }
+         if (i) {
+            json += ',';
+         }
          const thisSummary = this.getSummaryText(thisValue, thisPath, maxLength - json.length);
          json += `${p}:${thisSummary}}`;
-         if (json.length > maxLength) { break; }
+         if (json.length > maxLength) {
+            break;
+         }
       }
       json += '}';
 

@@ -1,15 +1,15 @@
 import { Db, DbNamespace } from './Db';
-import { Connection } from '@core/models/Connection';
-import { Favorites, Workspace, WorkspaceState } from '@core/models';
+import { Workspace, Connection, Widget } from '../../../core/index.js';
 
 export class Config {
-
    private readonly _ns: DbNamespace;
    private readonly _nsWorkspaces: DbNamespace;
+   private readonly _nsWidget: DbNamespace;
 
    public constructor(readonly db: Db) {
       this._ns = db.createNamespace('config');
       this._nsWorkspaces = this._ns.createNamespace('workspaces');
+      this._nsWidget = this._nsWorkspaces.createNamespace('widget');
    }
 
    public readonly connections = {
@@ -18,11 +18,10 @@ export class Config {
       },
       update: (connections: Connection[]) => {
          return this._ns.put('connections', connections);
-      }
+      },
    };
 
    public readonly workspaces = {
-
       list: () => {
          return this._nsWorkspaces.get('') as Promise<Workspace[] | null>;
       },
@@ -30,24 +29,29 @@ export class Config {
          return this._nsWorkspaces.put('', workspaces);
       },
 
-      state: {
-         get: (id: string) => {
-            return this._nsWorkspaces.createNamespace('state').get(id) as Promise<WorkspaceState | null>;
+      widget: {
+         list: () => {
+            const iter: AsyncGenerator<Widget> = this._nsWidget.iterator();
+            return iter;
          },
-         update: (id: string, workspaceState: WorkspaceState) => {
-            return this._nsWorkspaces.createNamespace('state').put(id, workspaceState);
-         }
-      }
-
-   };
-
-   public readonly favorites = {
-      get: () => {
-         return this._ns.get('favorites');
+         get: (id: string) => {
+            return this._nsWidget.delete(id);
+         },
+         update: (widget: Widget) => {
+            return this._nsWidget.put(widget.id, widget);
+         },
+         delete: (id: string) => {
+            return this._nsWidget.delete(id);
+         },
       },
-      update: (favorites: Favorites) => {
-         return this._ns.put('favorites', favorites);
-      }
-   };
 
+      // state: {
+      //    get: (id: string) => {
+      //       return this._nsWorkspaces.createNamespace('state').get(id) as Promise<WorkspaceState | null>;
+      //    },
+      //    update: (id: string, workspaceState: WorkspaceState) => {
+      //       return this._nsWorkspaces.createNamespace('state').put(id, workspaceState);
+      //    },
+      // },
+   };
 }

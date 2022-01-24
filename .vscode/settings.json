@@ -4,11 +4,15 @@
     "EJSON",
     "FAKZ",
     "jlytg",
+    "mongodump",
+    "mongorestore",
     "nesw",
     "pino",
     "postcss",
     "prestart",
+    "Promisfied",
     "typecheck",
+    "unsub",
     "Vues"
   ],
   "prettier.vueIndentScriptAndStyle": true

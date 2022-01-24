@@ -1,7 +1,6 @@
 import { Db, DbNamespace } from './Db';
 
 export class Cache {
-
    private readonly _ns: DbNamespace;
 
    public constructor(readonly db: Db) {
@@ -16,5 +15,7 @@ export class Cache {
       return this._ns.put(name, data);
    }
 
-
+   public delete(name: string) {
+      return this._ns.delete(name);
+   }
 }
