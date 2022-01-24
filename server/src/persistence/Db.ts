@@ -1,4 +1,7 @@
+import { mkdirSync } from 'fs';
 import level from 'level';
+import path from 'path';
+const __dirname = path.resolve();
 
 const instances = new Map<string, level.LevelDB>();
 
@@ -6,9 +9,13 @@ export class Db {
    private readonly _level: level.LevelDB;
 
    public constructor(public readonly name: string = 'default') {
+      const levelPath = path.join(__dirname, `data/.level/${name}`);
+      mkdirSync(levelPath, { recursive: true });
+      console.log(`Opening leveldb from ${levelPath}`);
+
       let db = instances.get(name);
       if (!db) {
-         db = level(`.level/${name}`);
+         db = level(levelPath);
          if (name === 'cache') {
             db.clear();
          }

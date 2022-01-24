@@ -4,6 +4,7 @@
     "EJSON",
     "FAKZ",
     "jlytg",
+    "leveldb",
     "mongodump",
     "mongorestore",
     "nesw",

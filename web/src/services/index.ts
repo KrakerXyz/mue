@@ -1,5 +1,4 @@
 export * from './rpc';
-export * from './observables';
 export * from './connections';
 export * from './WidgetManager';
 export * from './refToPromise';

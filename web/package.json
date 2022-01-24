@@ -1,7 +1,10 @@
 {
   "name": "@krakerxyz/mue-web",
   "version": "0.0.1",
-  "author": "Josh Kraker <joshkrak@gmail.com>",
+  "author": {
+    "name": "Josh Kraker",
+    "email": "joshkrak@gmail.com"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "files": [
@@ -20,12 +23,10 @@
     "rpc-thing": "file:../../rpc-thing",
     "tslib": "^2.3.1",
     "uuid": "^8.3.2",
-    "vue": "^3.1.1",
-    "zen-observable": "^0.8.15"
+    "vue": "^3.1.1"
   },
   "devDependencies": {
     "@types/uuid": "^8.3.3",
-    "@types/zen-observable": "^0.8.3",
     "@typescript-eslint/eslint-plugin": "^5",
     "@typescript-eslint/parser": "^5",
     "@vitejs/plugin-vue": "^2.0.1",

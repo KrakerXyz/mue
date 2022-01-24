@@ -9,7 +9,6 @@ import fastifyStatic from 'fastify-static';
 import path from 'path';
 const __dirname = path.resolve();
 
-import * as electron from 'electron';
 import { WebsocketRpc } from './services/WebSocketRpc.js';
 
 console.log('Initializing Fastify');
@@ -32,8 +31,10 @@ server.register(fastifyWebsocket, {
    },
 });
 
+const webPath = path.join(__dirname, 'dist/.web');
+console.log(`Serving webapp from ${webPath}`);
 server.register(fastifyStatic, {
-   root: path.join(__dirname, '.web'),
+   root: webPath,
    immutable: true,
    maxAge: '1d',
 });
@@ -43,9 +44,6 @@ server.get('/ws-rpc', { websocket: true }, websocketRpc.handler);
 
 server.setNotFoundHandler((req, res) => {
    if (req.method !== 'GET') {
-      return res.status(404).send();
-   }
-   if (req.url.startsWith('/api')) {
       return res.status(404).send();
    }
    return res.sendFile('index.html');
@@ -67,6 +65,8 @@ const start = async () => {
 if (process.versions['electron']) {
    console.log('Opening electron');
    start().then(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const electron = require('electron');
       electron.app.whenReady().then(() => {
          const win = new electron.BrowserWindow({ width: 1200, height: 1000, autoHideMenuBar: true, frame: false });
          win.loadURL('http://localhost:3000');

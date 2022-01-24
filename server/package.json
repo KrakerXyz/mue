@@ -22,6 +22,7 @@
     "e": "npm run build && electron ."
   },
   "dependencies": {
+    "@krakerxyz/rpc-thing": "^1.0.0",
     "ajv": "^6.12.6",
     "dotenv": "^14.2.0",
     "eventemitter3": "^4.0.7",
@@ -30,12 +31,13 @@
     "fastify-websocket": "^4",
     "level": "^7.0.1",
     "mongodb": "^4.2.1",
-    "rpc-thing": "file:../../rpc-thing",
     "tslib": "^2.3.1",
     "uuid": "^8.3.2",
-    "zen-observable": "^0.8.15"
+    "zen-observable": "^0.8.15",
+    "pino-pretty": "^7"
   },
   "devDependencies": {
+    "electron": "^16.0.4",
     "@types/jest": "^27.0.3",
     "@types/level": "^6.0.0",
     "@types/node": "^16.11.9",
@@ -43,10 +45,8 @@
     "@types/zen-observable": "^0.8.3",
     "@typescript-eslint/eslint-plugin": "^5",
     "@typescript-eslint/parser": "^5",
-    "electron": "^16.0.4",
     "eslint": "^8",
     "jest": "^27.3.1",
-    "pino-pretty": "^7",
     "rimraf": "^3.0.0",
     "ts-jest": "^27.0.7",
     "ts-node": "^10.1.0",

@@ -20,7 +20,8 @@ export function useRpc(): PromisfiedService<RpcService> {
 }
 
 function createTransport(): Transport {
-   const url = 'ws://localhost:3000/ws-rpc';
+   const baseUrl = (window.location.protocol === 'http:' ? 'ws' : 'wss') + '://' + window.location.host;
+   const url = `${baseUrl}/ws-rpc`;
    const ws = new WebSocket(url);
    const inFlight = new Map<string, (data: any) => void>();
 

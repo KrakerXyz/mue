@@ -1,7 +1,7 @@
 import { RpcTransportMessage } from '../../../core/models/index.js';
 import { FastifyRequest } from 'fastify';
 import { SocketStream } from 'fastify-websocket';
-import { DefaultSerializer, Transport } from 'rpc-thing';
+import { DefaultSerializer, Transport } from '@krakerxyz/rpc-thing';
 import { WorkspaceServices } from './index.js';
 import { createRpcService } from './RpcService.js';
 import { v4 } from 'uuid';

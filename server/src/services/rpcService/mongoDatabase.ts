@@ -112,10 +112,12 @@ export function useMongoDatabaseServices(services: WorkspaceServices, debug: (ms
 
             const localDbName = `${config.fromDatabase}${todayString}`;
 
-            const dir = `${__dirname}\\db-backup\\${config.fromConnection}`;
-            await mkdir(dir, { recursive: true });
-            const mongodump = `${__dirname}\\db-backup\\mongodump`;
-            const dumpArgs = [`/uri:${fromCon.connectionString}`, `/db:${config.fromDatabase}`, '/gzip', `/archive:${dir}\\${localDbName}`];
+            const archivePath = path.join(__dirname, 'data', 'db-backup', config.fromConnection, localDbName);
+            await mkdir(archivePath, { recursive: true });
+            const mongodump = path.join(__dirname, 'bin', 'mongodump');
+            console.log(`Using mongodump from ${mongodump}`);
+            console.log(`Saving backup to ${archivePath}`);
+            const dumpArgs = [`/uri:${fromCon.connectionString}`, `/db:${config.fromDatabase}`, '/gzip', `/archive:${archivePath}`];
 
             debug(`Starting ${config.fromDatabase} dump`);
             statusCallback({ status: 'Starting dump' });
@@ -136,13 +138,13 @@ export function useMongoDatabaseServices(services: WorkspaceServices, debug: (ms
                });
             });
 
-            debug(`Dump finished, starting restore for ${config.toDatabase}`);
+            debug(`Dump finished, starting restore to ${config.toDatabase}`);
 
-            const mongorestore = `${__dirname}\\db-backup\\mongorestore`;
+            const mongorestore = path.join(__dirname, 'bin', 'mongorestore');
             const restoreArgs = [
                '/drop',
                '/gzip',
-               `/archive:${dir}\\${localDbName}`,
+               `/archive:${archivePath}`,
                `/nsFrom:${config.fromDatabase}`,
                `/nsTo:${config.toDatabase}`,
                `/uri:${toCon.connectionString}`,
