@@ -34,12 +34,12 @@ export interface RpcService {
   configWorkspacePut(workspace: Workspace): Promise<void>;
   configWorkspaceDelete(workspace: Workspace): Promise<void>;
 
-  configWorkspaceWidgetList(
+  configWidgetList(
     workspaceId: string,
     callback: (widget: ListItem<Widget>) => void
   ): Subscription;
-  configWorkspaceWidgetPut(widget: Widget): Promise<void>;
-  configWorkspaceWidgetDelete(widget: Widget): Promise<void>;
+  configWidgetPut(widget: Widget): Promise<void>;
+  configWidgetDelete(widget: Widget): Promise<void>;
 
   mongoDatabaseList(
     connection: string,

@@ -104,7 +104,7 @@ export class WidgetManager {
          this._widgetSubscription();
       }
 
-      this._widgetSubscription = this._rpc.configWorkspaceWidgetList(workspaceId, (w) => {
+      this._widgetSubscription = this._rpc.configWidgetList(workspaceId, (w) => {
          for (const w of this._widgets) {
             if (!w.workspace.style.width) {
                w.workspace.style.width = '50%';
@@ -145,9 +145,9 @@ export class WidgetManager {
          for (const sw of this._widgetsSnapshot ?? []) {
             const w = this._widgets.find((x) => x.id === sw.id);
             if (!w) {
-               this._rpc.configWorkspaceWidgetDelete(sw);
+               this._rpc.configWidgetDelete(sw);
             } else if (!deepEquals(sw, w)) {
-               this._rpc.configWorkspaceWidgetPut(w);
+               this._rpc.configWidgetPut(w);
             }
          }
 
@@ -157,7 +157,7 @@ export class WidgetManager {
             if (sw) {
                continue;
             }
-            this._rpc.configWorkspaceWidgetPut(w);
+            this._rpc.configWidgetPut(w);
          }
          this._widgetsSnapshot = deepClone(this._widgets);
       }, 500);

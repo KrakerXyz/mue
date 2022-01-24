@@ -3,7 +3,7 @@ import { FastifyRequest } from 'fastify';
 import { SocketStream } from 'fastify-websocket';
 import { DefaultSerializer, Transport } from 'rpc-thing';
 import { WorkspaceServices } from './index.js';
-import { RpcService } from './RpcService.js';
+import { createRpcService } from './RpcService.js';
 import { v4 } from 'uuid';
 
 export class WebsocketRpc {
@@ -13,7 +13,7 @@ export class WebsocketRpc {
       log.info('Incoming WS-RPC connection');
 
       const services = new WorkspaceServices();
-      const rpcService = new RpcService(services);
+      const rpcService = createRpcService(services);
       const inFlight = new Map<string, (data: any) => void>();
 
       const transport: Transport = {
